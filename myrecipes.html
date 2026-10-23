@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 조합 | Sandwhich?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #b8d98b;
+    --primary-active: #d4e8ad;
+    --primary-pale: #eef6dc;
+    --on-primary: #1f1510;
+    --ink: #1f1510;
+    --body: #454745;
+    --mute: #868685;
+    --canvas: #ffffff;
+    --bg: #fcf9f2;
+    --card-bg: #f0ebe1;
+    --hover: #d4e8ad;
+    --banner: #f7efd2;
+    --positive-deep: #054d28;
+    --negative: #d03238;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-xl: 24px;
+    --r-pill: 9999px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Inter, 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "calt";
+    font-size: 16px; line-height: 24px;
+    background: var(--bg); color: var(--ink);
+  }
+  .view { padding: 32px; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 40px; line-height: 44px; font-weight: 900; }
+  .sub { color: var(--body); margin-top: 4px; }
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+
+  .btn {
+    padding: 12px 24px; border: none; border-radius: var(--r-xl);
+    background: var(--primary); color: var(--on-primary);
+    font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn.secondary { background: var(--card-bg); }
+  .btn.secondary:hover { background: var(--banner); }
+  .btn.small { padding: 6px 14px; font-size: 14px; line-height: 20px; }
+  .btn.danger { background: var(--card-bg); color: var(--negative); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  /* 입력 폼 */
+  .form { background: var(--banner); border-radius: var(--r-xl); padding: 24px; margin-bottom: 24px; display: none; }
+  .form.open { display: block; }
+  .form h2 { font-size: 24px; line-height: 31px; font-weight: 600; margin-bottom: 16px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { margin-bottom: 16px; }
+  .field > label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .field .hint { font-weight: 400; color: var(--mute); margin-left: 6px; }
+  input[type=text], textarea {
+    width: 100%; padding: 12px 16px; font: inherit; color: var(--ink);
+    background: var(--canvas); border: 1px solid var(--ink); border-radius: var(--r-md);
+  }
+  textarea { resize: vertical; min-height: 72px; }
+  input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 6px 14px; border: none; border-radius: var(--r-pill);
+    background: var(--canvas); color: var(--ink);
+    font: inherit; font-size: 14px; font-weight: 600; line-height: 20px; cursor: pointer;
+    transition: background .12s;
+  }
+  .chip:hover { background: var(--primary-active); }
+  .chip.on { background: var(--primary); }
+  .actions { display: flex; gap: 8px; margin-top: 8px; }
+  .msg { margin-top: 12px; font-size: 14px; color: var(--negative); min-height: 20px; }
+
+  /* 목록 */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--card-bg); border-radius: var(--r-xl); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+  .card h3 { font-size: 24px; line-height: 31px; font-weight: 600; letter-spacing: -0.48px; }
+  .card .menu { font-size: 14px; color: var(--body); margin-top: -8px; }
+  .card dl { display: grid; grid-template-columns: 52px 1fr; gap: 6px 8px; font-size: 14px; line-height: 20px; }
+  .card dt { color: var(--mute); font-weight: 600; }
+  .card dd { color: var(--ink); }
+  .card .req { font-size: 14px; background: var(--primary-pale); border-radius: var(--r-md); padding: 8px 12px; }
+  .card .date { font-size: 12px; color: var(--mute); margin-top: auto; }
+  .card .btns { display: flex; gap: 8px; }
+
+  .empty { background: var(--card-bg); border-radius: var(--r-xl); padding: 48px; text-align: center; color: var(--body); }
+  .empty .big { font-size: 56px; line-height: 64px; display: block; margin-bottom: 8px; filter: sepia(.3) saturate(1.1); }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: var(--r-pill); background: var(--primary-pale); color: var(--positive-deep); font-size: 14px; font-weight: 600; }
+
+  @media (max-width: 767px) {
+    .view { padding: 16px; }
+    h1 { font-size: 32px; line-height: 36px; }
+    .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="view">
+  <div class="top">
+    <div>
+      <h1>내 조합</h1>
+      <p class="sub">저장한 샌드위치 조합을 보고, 고치고, 지울 수 있어요.</p>
+    </div>
+    <button class="btn" id="newBtn">＋ 새 조합 추가</button>
+  </div>
+
+  <form class="form" id="form" autocomplete="off">
+    <h2 id="formTitle">새 조합</h2>
+    <div class="row">
+      <div class="field"><label for="name">조합 이름</label><input type="text" id="name" maxlength="40" placeholder="예) 매콤 치킨 데이"></div>
+      <div class="field"><label for="menu">샌드위치 메뉴</label><input type="text" id="menu" maxlength="40" placeholder="예) 로스트 치킨"></div>
+    </div>
+    <div class="field"><label>빵</label><div class="chips" data-group="bread"></div></div>
+    <div class="field"><label>치즈</label><div class="chips" data-group="cheese"></div></div>
+    <div class="field"><label>야채<span class="hint">여러 개 선택</span></label><div class="chips" data-group="vegetables"></div></div>
+    <div class="field"><label>소스<span class="hint">여러 개 선택</span></label><div class="chips" data-group="sauces"></div></div>
+    <div class="field"><label for="request">요청사항</label><textarea id="request" maxlength="200" placeholder="예) 야채 많이, 빵은 따뜻하게"></textarea></div>
+    <div class="actions">
+      <button type="submit" class="btn" id="saveBtn">저장</button>
+      <button type="button" class="btn secondary" id="cancelBtn">취소</button>
+    </div>
+    <p class="msg" id="formMsg" role="alert"></p>
+  </form>
+
+  <div id="list"></div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://sbfvdczkisxdpjblqohs.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_A1f4A6YZIYxED4qC-rxbvg_vr3hhN5C'; // 공개용(publishable) 키
+
+  // 재료 목록은 여기서 고치면 됩니다.
+  const OPTIONS = {
+    bread:      ['하티', '위트', '파마산 오레가노', '플랫브레드', '허니오트', '화이트'],
+    cheese:     ['아메리칸', '슈레드', '모짜렐라', '치즈 없음'],
+    vegetables: ['양상추', '토마토', '오이', '피망', '피클', '올리브', '할라피뇨', '양파'],
+    sauces:     ['랜치', '마요네즈', '스위트 칠리', '사우스웨스트', '허니 머스타드', '올리브 오일', '소금', '후추'],
+  };
+  const SINGLE = { bread: true, cheese: true };
+
+  // 로그인 전이므로 브라우저마다 임시 사용자 ID를 만들어 내 조합만 구분합니다.
+  let memUid = null;
+  function getUid() {
+    try {
+      let id = localStorage.getItem('sw_uid');
+      if (!id) { id = crypto.randomUUID(); localStorage.setItem('sw_uid', id); }
+      return id;
+    } catch (e) {
+      return memUid || (memUid = crypto.randomUUID());
+    }
+  }
+  const UID = getUid();
+
+  async function api(method, query, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/recipes' + query, {
+      method,
+      headers: {
+        apikey: SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error('요청에 실패했어요 (' + res.status + ')');
+    return res.status === 204 ? null : res.json();
+  }
+
+  const $ = id => document.getElementById(id);
+  const form = $('form'), listEl = $('list');
+  let recipes = [];
+  let editingId = null;
+  let picked = { bread: [], cheese: [], vegetables: [], sauces: [] };
+
+  // ----- 칩 선택 -----
+  function renderChips() {
+    document.querySelectorAll('.chips').forEach(box => {
+      const g = box.dataset.group;
+      box.innerHTML = '';
+      OPTIONS[g].forEach(opt => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip' + (picked[g].includes(opt) ? ' on' : '');
+        b.textContent = opt;
+        b.addEventListener('click', () => {
+          const on = picked[g].includes(opt);
+          if (SINGLE[g]) picked[g] = on ? [] : [opt];
+          else picked[g] = on ? picked[g].filter(x => x !== opt) : picked[g].concat(opt);
+          renderChips();
+        });
+        box.appendChild(b);
+      });
+    });
+  }
+
+  // ----- 폼 열기/닫기 -----
+  function openForm(r) {
+    editingId = r ? r.id : null;
+    $('formTitle').textContent = r ? '조합 수정' : '새 조합';
+    $('name').value = r ? r.name : '';
+    $('menu').value = r ? (r.menu || '') : '';
+    $('request').value = r ? (r.request || '') : '';
+    picked = {
+      bread: r && r.bread ? [r.bread] : [],
+      cheese: r && r.cheese ? [r.cheese] : [],
+      vegetables: r ? r.vegetables.slice() : [],
+      sauces: r ? r.sauces.slice() : [],
+    };
+    $('formMsg').textContent = '';
+    renderChips();
+    form.classList.add('open');
+    $('name').focus();
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function closeForm() { form.classList.remove('open'); editingId = null; }
+
+  $('newBtn').addEventListener('click', () => openForm(null));
+  $('cancelBtn').addEventListener('click', closeForm);
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('name').value.trim();
+    if (!name) { $('formMsg').textContent = '조합 이름을 입력해 주세요.'; return; }
+    const row = {
+      name,
+      menu: $('menu').value.trim() || null,
+      bread: picked.bread[0] || null,
+      cheese: picked.cheese[0] || null,
+      vegetables: picked.vegetables,
+      sauces: picked.sauces,
+      request: $('request').value.trim() || null,
+    };
+    $('saveBtn').disabled = true;
+    try {
+      if (editingId) await api('PATCH', '?id=eq.' + editingId + '&user_id=eq.' + UID, row);
+      else await api('POST', '', Object.assign({ user_id: UID }, row));
+      closeForm();
+      await load();
+    } catch (err) {
+      $('formMsg').textContent = err.message;
+    } finally {
+      $('saveBtn').disabled = false;
+    }
+  });
+
+  // ----- 목록 -----
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function renderList() {
+    listEl.innerHTML = '';
+    if (!recipes.length) {
+      const box = el('div', 'empty');
+      box.appendChild(el('span', 'big', '🥪'));
+      box.appendChild(el('p', null, '아직 저장한 조합이 없어요.'));
+      box.appendChild(el('p', null, '위의 “새 조합 추가”로 첫 조합을 만들어 보세요!'));
+      listEl.appendChild(box);
+      return;
+    }
+    const grid = el('div', 'grid');
+    recipes.forEach(r => {
+      const card = el('div', 'card');
+      card.appendChild(el('h3', null, r.name));
+      if (r.menu) card.appendChild(el('p', 'menu', r.menu));
+      const dl = el('dl');
+      [['빵', r.bread], ['치즈', r.cheese], ['야채', r.vegetables.join(', ')], ['소스', r.sauces.join(', ')]].forEach(([k, v]) => {
+        dl.appendChild(el('dt', null, k));
+        dl.appendChild(el('dd', null, v || '-'));
+      });
+      card.appendChild(dl);
+      if (r.request) card.appendChild(el('p', 'req', '📝 ' + r.request));
+      card.appendChild(el('p', 'date', new Date(r.created_at).toLocaleDateString('ko-KR')));
+      const btns = el('div', 'btns');
+      const edit = el('button', 'btn small secondary', '수정');
+      edit.addEventListener('click', () => openForm(r));
+      const del = el('button', 'btn small danger', '삭제');
+      del.addEventListener('click', async () => {
+        if (!confirm('“' + r.name + '” 조합을 삭제할까요?')) return;
+        try { await api('DELETE', '?id=eq.' + r.id + '&user_id=eq.' + UID); await load(); }
+        catch (err) { alert(err.message); }
+      });
+      btns.append(edit, del);
+      card.appendChild(btns);
+      grid.appendChild(card);
+    });
+    listEl.appendChild(grid);
+  }
+
+  async function load() {
+    try {
+      recipes = await api('GET', '?user_id=eq.' + UID + '&order=created_at.desc');
+      renderList();
+    } catch (err) {
+      listEl.innerHTML = '';
+      listEl.appendChild(el('div', 'empty', '목록을 불러오지 못했어요. ' + err.message));
+    }
+  }
+
+  renderChips();
+  load();
+</script>
+</body>
+</html>
