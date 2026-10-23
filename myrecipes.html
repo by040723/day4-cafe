@@ -85,6 +85,11 @@
   .card .menu { font-size: 14px; color: var(--body); margin-top: -8px; }
   .card dl { display: grid; grid-template-columns: 52px 1fr; gap: 6px 8px; font-size: 14px; line-height: 20px; }
   .card dt { color: var(--mute); font-weight: 600; }
+  /* 재료별 상징 색 (글자색만) */
+  [data-k="빵"] { color: #b5772b !important; }
+  [data-k="치즈"] { color: #c79400 !important; }
+  [data-k="야채"] { color: #4c9a34 !important; }
+  [data-k="소스"] { color: #d0453a !important; }
   .card dd { color: var(--ink); }
   .card .req { font-size: 14px; background: var(--primary-pale); border-radius: var(--r-md); padding: 8px 12px; }
   .card .date { font-size: 12px; color: var(--mute); margin-top: auto; }
@@ -117,10 +122,10 @@
       <div class="field"><label for="name">조합 이름</label><input type="text" id="name" maxlength="40" placeholder="예) 매콤 치킨 데이"></div>
       <div class="field"><label for="menu">샌드위치 메뉴</label><input type="text" id="menu" maxlength="40" placeholder="예) 로스트 치킨"></div>
     </div>
-    <div class="field"><label>빵</label><div class="chips" data-group="bread"></div></div>
-    <div class="field"><label>치즈</label><div class="chips" data-group="cheese"></div></div>
-    <div class="field"><label>야채<span class="hint">여러 개 선택</span></label><div class="chips" data-group="vegetables"></div></div>
-    <div class="field"><label>소스<span class="hint">여러 개 선택</span></label><div class="chips" data-group="sauces"></div></div>
+    <div class="field"><label data-k="빵">빵</label><div class="chips" data-group="bread"></div></div>
+    <div class="field"><label data-k="치즈">치즈</label><div class="chips" data-group="cheese"></div></div>
+    <div class="field"><label data-k="야채">야채<span class="hint">여러 개 선택</span></label><div class="chips" data-group="vegetables"></div></div>
+    <div class="field"><label data-k="소스">소스<span class="hint">여러 개 선택</span></label><div class="chips" data-group="sauces"></div></div>
     <div class="field"><label for="request">요청사항</label><textarea id="request" maxlength="200" placeholder="예) 야채 많이, 빵은 따뜻하게"></textarea></div>
     <div class="actions">
       <button type="submit" class="btn" id="saveBtn">저장</button>
@@ -274,7 +279,7 @@
       if (r.menu) card.appendChild(el('p', 'menu', r.menu));
       const dl = el('dl');
       [['빵', r.bread], ['치즈', r.cheese], ['야채', r.vegetables.join(', ')], ['소스', r.sauces.join(', ')]].forEach(([k, v]) => {
-        dl.appendChild(el('dt', null, k));
+        const dt = el('dt', null, k); dt.dataset.k = k; dl.appendChild(dt);
         dl.appendChild(el('dd', null, v || '-'));
       });
       card.appendChild(dl);
