@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>추천 조합 | Sandwhich?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #b8d98b;
+    --primary-active: #d4e8ad;
+    --primary-pale: #eef6dc;
+    --on-primary: #1f1510;
+    --ink: #1f1510;
+    --body: #454745;
+    --mute: #868685;
+    --canvas: #ffffff;
+    --bg: #fcf9f2;
+    --card-bg: #f0ebe1;
+    --hover: #d4e8ad;
+    --banner: #f7efd2;
+    --positive-deep: #054d28;
+    --negative: #d03238;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-xl: 24px;
+    --r-pill: 9999px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Inter, 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "calt";
+    font-size: 16px; line-height: 24px;
+    background: var(--bg); color: var(--ink);
+  }
+  .view { padding: 32px; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 40px; line-height: 44px; font-weight: 900; }
+  .sub { color: var(--body); margin-top: 4px; margin-bottom: 24px; }
+  h2 { font-size: 24px; line-height: 31px; font-weight: 600; letter-spacing: -0.48px; }
+  section { margin-top: 40px; }
+  .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  .btn {
+    padding: 12px 24px; border: none; border-radius: var(--r-xl);
+    background: var(--primary); color: var(--on-primary);
+    font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn.secondary { background: var(--canvas); }
+  .btn.secondary:hover { background: var(--banner); }
+  .btn.small { padding: 6px 14px; font-size: 14px; line-height: 20px; }
+  .btn:disabled { opacity: .55; cursor: default; }
+
+  /* AI 추천 */
+  .ai { background: var(--banner); border-radius: var(--r-xl); padding: 28px; }
+  .ai h2 { margin-bottom: 4px; }
+  .ai p.help { color: var(--body); font-size: 14px; margin-bottom: 16px; }
+  .ai .ask { display: flex; gap: 8px; flex-wrap: wrap; }
+  input[type=text] {
+    flex: 1; min-width: 200px; padding: 12px 16px; font: inherit; color: var(--ink);
+    background: var(--canvas); border: none; border-radius: var(--r-md);
+  }
+  input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  #search { background: var(--canvas); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip {
+    padding: 6px 14px; border: none; border-radius: var(--r-pill);
+    background: var(--canvas); color: var(--ink);
+    font: inherit; font-size: 14px; font-weight: 600; line-height: 20px; cursor: pointer; transition: background .12s;
+  }
+  .chip:hover { background: var(--primary-active); }
+  .ai-result { margin-top: 20px; }
+  .note { font-size: 14px; color: var(--body); }
+  .note.err { color: var(--negative); }
+
+  /* 카드 */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  /* 넘겨 보는 카드 목록: 두 장씩 보이고, 화살표는 양옆 여백에 */
+  .carousel { display: flex; align-items: center; gap: 8px; }
+  .track { flex: 1; min-width: 0; display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .track::-webkit-scrollbar { display: none; }
+  .track .card { flex: 0 0 calc((100% - 16px) / 2); scroll-snap-align: start; }
+  .track .empty { flex: 1; }
+  .arrow {
+    flex: 0 0 40px; width: 40px; height: 56px; padding: 0;
+    border: none; background: none; color: var(--primary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: color .15s;
+  }
+  .arrow svg { width: 28px; height: 28px; }
+  .arrow:hover { color: #9cc766; }
+  .arrow:disabled { opacity: .3; cursor: default; color: var(--primary); }
+  .card { background: var(--card-bg); border-radius: var(--r-xl); padding: 24px; position: relative; container-type: inline-size; }
+  .card-body { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .info { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card-body.no-art { grid-template-columns: 1fr !important; }
+  .art { order: -1; display: flex; align-items: center; justify-content: center; }
+  .art svg { width: 100%; height: auto; max-height: 150px; }
+  /* 카드가 넓으면 그림은 오른쪽 여백에 */
+  @container (min-width: 460px) {
+    .card-body { grid-template-columns: 1fr minmax(200px, 44%); gap: 24px; }
+    .art { order: 2; }
+    .art svg { max-height: 190px; }
+  }
+  .card.pale { background: var(--primary-pale); }
+  .card h3 { font-size: 24px; line-height: 31px; font-weight: 600; letter-spacing: -0.48px; }
+  .card .menu { font-size: 14px; color: var(--body); margin-top: -8px; }
+  .card dl { display: grid; grid-template-columns: 52px 1fr; gap: 6px 8px; font-size: 14px; line-height: 20px; }
+  .card dt { color: var(--mute); font-weight: 600; }
+  /* 재료별 상징 색 (글자색만) */
+  [data-k="빵"] { color: #b5772b !important; }
+  [data-k="치즈"] { color: #c79400 !important; }
+  [data-k="야채"] { color: #4c9a34 !important; }
+  [data-k="소스"] { color: #d0453a !important; }
+  .card .why { font-size: 14px; background: var(--canvas); border-radius: var(--r-md); padding: 8px 12px; }
+  .card .btns { margin-top: auto; }
+  .badge { display: inline-block; align-self: flex-start; padding: 4px 12px; border-radius: var(--r-pill); background: var(--primary-pale); color: var(--positive-deep); font-size: 14px; font-weight: 600; }
+  .card.pale .badge { background: var(--canvas); }
+
+  .empty { background: var(--card-bg); border-radius: var(--r-xl); padding: 40px; text-align: center; color: var(--body); }
+  .empty .big { font-size: 48px; line-height: 56px; display: block; margin-bottom: 8px; filter: sepia(.3) saturate(1.1); }
+
+  @media (max-width: 767px) {
+    .view { padding: 16px; }
+    h1 { font-size: 32px; line-height: 36px; }
+    .ai { padding: 20px; }
+    .track .card { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="view">
+  <h1>추천 조합</h1>
+  <p class="sub">오늘 뭐 먹을지 고민될 때, 추천 조합을 골라 내 조합으로 담아 보세요.</p>
+
+  <div class="ai">
+    <h2>✨ AI에게 추천받기</h2>
+    <p class="help">기분이나 입맛을 알려 주면 어울리는 조합을 골라 줘요.</p>
+    <form class="ask" id="aiForm" autocomplete="off">
+      <input type="text" id="aiPrompt" maxlength="100" placeholder="예) 매콤하고 든든한 게 먹고 싶어요">
+      <button type="submit" class="btn" id="aiBtn">추천받기</button>
+    </form>
+    <div class="chips" id="aiChips"></div>
+    <div class="ai-result" id="aiResult" aria-live="polite"></div>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>🥪 추천 카드</h2>
+      <button type="button" class="btn small secondary" id="reroll">🎲 다시 뽑기</button>
+    </div>
+    <p class="note" style="margin:-8px 0 16px">다른 사람들의 조합 중에서 골라 온 카드예요.</p>
+    <div id="recs"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>👀 다른 사람들의 조합</h2>
+      <input type="text" id="search" maxlength="40" placeholder="이름·재료로 검색" style="flex:0 1 260px">
+    </div>
+    <div class="carousel">
+      <button type="button" class="arrow prev" id="prev" aria-label="이전 조합"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4 L7 12 L15 20"/></svg></button>
+      <div class="track" id="others"></div>
+      <button type="button" class="arrow next" id="next" aria-label="다음 조합"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 L17 12 L9 20"/></svg></button>
+    </div>
+  </section>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://sbfvdczkisxdpjblqohs.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_A1f4A6YZIYxED4qC-rxbvg_vr3hhN5C'; // 공개용(publishable) 키
+
+  const MOODS = ['매콤한', '담백한', '든든한', '가벼운', '달콤한', '상큼한'];
+
+  // 로그인 전이므로 브라우저마다 임시 사용자 ID를 씁니다. (myrecipes.html과 동일)
+  let memUid = null;
+  function getUid() {
+    try {
+      let id = localStorage.getItem('sw_uid');
+      if (!id) { id = crypto.randomUUID(); localStorage.setItem('sw_uid', id); }
+      return id;
+    } catch (e) {
+      return memUid || (memUid = crypto.randomUUID());
+    }
+  }
+  const UID = getUid();
+
+  const headers = { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' };
+
+  async function rest(method, table, query, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + query, {
+      method,
+      headers: Object.assign({ Prefer: 'return=minimal' }, headers),
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error('요청에 실패했어요 (' + res.status + ')');
+    return method === 'GET' ? res.json() : null;
+  }
+
+  const $ = id => document.getElementById(id);
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  // 조합 카드 (추천/다른 사람/AI 결과 공통)
+  // ===== 재료에 맞춰 그리는 납작한 샌드위치 그림 =====
+  let svgN = 0;
+  function sandwichSVG(r) {
+    const id = 'sw' + (++svgN);
+    const X = 30, BW = 240, BH = 44, GAP = 4;
+    const BREAD = {
+      '화이트': ['#f6e2b8', '#ffffff'], '하티': ['#e3a352', '#f3cf94'], '위트': ['#b5793a', '#d9a566'],
+      '허니오트': ['#e8b04a', '#fff0b8'], '파마산 오레가노': ['#e3a352', '#fff3d6'], '플랫브레드': ['#efc88a', '#fbe6c0'],
+    };
+    const [bc, bl] = BREAD[r.bread] || BREAD['하티'];
+    const veg = r.vegetables || [], sau = r.sauces || [];
+    const text = (r.menu || '') + ' ' + (r.name || '');
+
+    const rect = (y, h, fill, rx, x, w) =>
+      '<rect x="' + (x == null ? X : x) + '" y="' + y + '" width="' + (w == null ? BW : w) + '" height="' + h + '" rx="' + (rx == null ? h / 2 : rx) + '" fill="' + fill + '"/>';
+    const wave = (y, h, color, sw, amp) =>
+      '<path d="M' + X + ' ' + (y + h / 2) + ' q15 ' + (-amp * 2) + ' 30 0' + ' t30 0'.repeat(7) +
+      '" fill="none" stroke="' + color + '" stroke-width="' + sw + '"/>';
+    const dots = (y, h, n, rad, fill, inner) => {
+      let s = '';
+      for (let i = 0; i < n; i++) {
+        const cx = X + BW / n * (i + 0.5), cy = y + h / 2;
+        s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rad + '" fill="' + fill + '"/>';
+        if (inner) s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + inner[0] + '" fill="' + inner[1] + '"/>';
+      }
+      return s;
+    };
+
+    // 야채 층
+    const VEG = {
+      // 양상추: 홈 화면 샌드위치와 같은 물결 모양 초록 띠
+      '양상추':   { h: 16, d: y => {
+        let p = 'M' + X + ' ' + y + ' q15 14 30 0'.repeat(1);
+        for (let i = 1; i < 8; i++) p += ' q15 14 30 0';
+        return '<path d="' + p + ' V' + (y + 10) + ' a6 6 0 0 1 -6 6 H' + (X + 6) + ' a6 6 0 0 1 -6 -6 Z" fill="#7bd65a"/>';
+      } },
+      '토마토':   { h: 14, d: y => '<clipPath id="' + id + 'tm"><rect x="' + X + '" y="' + y + '" width="' + BW + '" height="14" rx="7"/></clipPath>' +
+                    '<g clip-path="url(#' + id + 'tm)">' + rect(y, 14, '#f05a24', 0) + rect(y, 14, '#cc2229', 0, X, 60) + '</g>' },
+      '오이':     { h: 8,  d: y => rect(y, 8, '#8fd16a') },
+      '피망':     { h: 10, d: y => rect(y, 10, '#4fa83d') },
+      // 피클: 한 줄에 둥근 선 3개 (새우·치킨처럼 조각으로)
+      '피클':     { h: 9,  d: y => [0, 1, 2].map(i => rect(y, 9, '#7d9b2f', 4.5, X + i * 84, 72)).join('') },
+      '올리브':   { h: 12, d: y => dots(y, 12, 8, 6, '#2b2622', [2.2, '#8a8a6a']) },
+      '할라피뇨': { h: 12, d: y => dots(y, 12, 7, 6, '#3f9b2c', [2.4, '#c5e38f']) },
+      '양파':     { h: 8,  d: y => rect(y, 8, '#e7d3ee') + wave(y, 8, '#cfa9de', 2, 2) },
+    };
+    // 고기·속재료 층 (메뉴 이름으로 판단)
+    const PROT = [
+      [/새우|쉬림프/, { h: 26, d: y => {
+        let s = '';
+        for (let i = 0; i < 4; i++) {
+          const cx = X + 34 + i * 58;
+          s += '<path d="M' + (cx - 26) + ' ' + (y + 22) + ' C' + (cx - 28) + ' ' + (y + 2) + ' ' + (cx + 20) + ' ' + (y - 2) + ' ' + (cx + 26) + ' ' + (y + 18) +
+               ' C' + (cx + 14) + ' ' + (y + 10) + ' ' + (cx - 8) + ' ' + (y + 12) + ' ' + (cx - 26) + ' ' + (y + 22) + 'Z" fill="#ff9a76"/>' +
+               '<path d="M' + (cx - 8) + ' ' + (y + 6) + ' l2 7 M' + (cx + 4) + ' ' + (y + 5) + ' l1 7 M' + (cx + 14) + ' ' + (y + 8) + ' l0 6" stroke="#f0613a" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        }
+        return s;
+      } }],
+      [/베이컨/, { h: 16, d: y => rect(y, 16, '#a8342a') + wave(y, 16, '#e07a5f', 6, 3) }],
+      [/치킨/, { h: 22, d: y => {
+        let s = '';
+        for (let i = 0; i < 4; i++) {
+          const x = X + i * 62;
+          s += rect(y, 22, '#d99a4e', 9, x, 54) +
+               '<path d="M' + (x + 14) + ' ' + (y + 4) + ' l8 14 M' + (x + 28) + ' ' + (y + 4) + ' l8 14" stroke="#a8692a" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        }
+        return s;
+      } }],
+      [/참치/, { h: 18, d: y => rect(y, 18, '#e9cfae', 9) + dots(y, 18, 12, 2, '#d6b48a') }],
+      [/에그/, { h: 18, d: y => rect(y, 18, '#fff1b8', 9) + dots(y, 18, 8, 4, '#ffd34d') }],
+      [/풀드포크|바비큐/, { h: 20, d: y => {
+        let s = rect(y, 20, '#8a4b2b', 6);
+        for (let i = 0; i < 14; i++) s += '<path d="M' + (X + 8 + i * 16) + ' ' + (y + 4) + ' l8 10" stroke="#c47a4a" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        return s;
+      } }],
+      [/비엠티|살라미|페퍼로니/, { h: 14, d: y => dots(y, 14, 6, 7, '#b8302c', [1.6, '#f0b8a8']) }],
+      [/터키/, { h: 10, d: y => rect(y, 10, '#ecd0b0') + wave(y, 10, '#d9a98a', 3, 2) }],
+      [/햄/, { h: 14, d: y => wave(y, 14, '#f4a6a6', 14, 3) }],
+    ];
+    const SAUCE = { '랜치': '#fff7e6', '마요네즈': '#fff0b0', '스위트 칠리': '#e8512b', '사우스웨스트': '#d9822b', '허니 머스타드': '#f2b410', '올리브 오일': '#cfd05a' };
+
+    const layers = [];
+    veg.filter(v => VEG[v]).slice(0, 5).forEach(v => layers.push(VEG[v]));
+    if (r.cheese && r.cheese !== '치즈 없음') {
+      layers.push({ h: 9, d: y => rect(y, 9, '#ffc82e') });
+    }
+    PROT.filter(([re]) => re.test(text)).slice(0, 2).forEach(([, L]) => layers.push(L));
+
+    // 소스: 패티와 겹치지 않게 소스마다 얇은 물결선 층으로 따로 (둥근 끝)
+    sau.filter(s => SAUCE[s]).slice(0, 2).forEach(s => {
+      layers.push({ h: 10, d: y => wave(y, 10, SAUCE[s], 4, 2.5).replace('fill="none"', 'fill="none" stroke-linecap="round"') });
+    });
+    // 소금·후추는 첫 층 위에 알갱이로
+    const grains = [sau.includes('소금') && '#ffffff', sau.includes('후추') && '#3a2a20'].filter(Boolean);
+    if (grains.length && layers.length) {
+      const first = layers[0];
+      layers[0] = { h: first.h, d: y => {
+        let s = first.d(y);
+        for (let i = 0; i < 14; i++) s += '<circle cx="' + (X + 10 + i * 17) + '" cy="' + (y + 3 + (i % 3) * 3) + '" r="1.7" fill="' + grains[i % grains.length] + '"/>';
+        return s;
+      } };
+    }
+
+    // 빵 (위·아래): 왼쪽 끝은 잘린 단면처럼 밝게
+    const topD = y => 'M' + X + ' ' + (y + BH) + ' V' + (y + 22) + ' A22 22 0 0 1 ' + (X + 22) + ' ' + y + ' H' + (X + BW - 22) + ' A22 22 0 0 1 ' + (X + BW) + ' ' + (y + 22) + ' V' + (y + BH) + ' Z';
+    const botD = y => 'M' + X + ' ' + y + ' H' + (X + BW) + ' V' + (y + 22) + ' A22 22 0 0 1 ' + (X + BW - 22) + ' ' + (y + BH) + ' H' + (X + 22) + ' A22 22 0 0 1 ' + X + ' ' + (y + 22) + ' Z';
+
+    let y = 8;
+    const topY = y;
+    let body = '';
+    y += BH + GAP;
+    layers.forEach(L => { body += L.d(y); y += L.h + GAP; });
+    const botY = y;
+    const H = botY + BH + 8;
+
+    // 빵 안에 들어간 것(귀리, 오레가노)만 아주 살짝 알갱이로 표현
+    const flecks = (yy) => {
+      let s = '';
+      if (r.bread === '허니오트') {
+        for (let i = 0; i < 9; i++) s += '<ellipse cx="' + (X + 22 + i * 25) + '" cy="' + (yy + 14 + (i % 3) * 7) + '" rx="4" ry="2" transform="rotate(' + (i % 2 ? 25 : -25) + ' ' + (X + 22 + i * 25) + ' ' + (yy + 14 + (i % 3) * 7) + ')" fill="' + bl + '"/>';
+      } else if (r.bread === '파마산 오레가노') {
+        for (let i = 0; i < 12; i++) s += '<circle cx="' + (X + 18 + i * 19) + '" cy="' + (yy + 12 + (i % 3) * 8) + '" r="1.8" fill="' + (i % 2 ? '#4c8a2f' : bl) + '"/>';
+      }
+      return s;
+    };
+    const top = '<path d="' + topD(topY) + '" fill="' + bc + '"/>' + flecks(topY);
+    const bot = '<path d="' + botD(botY) + '" fill="' + bc + '"/>';
+    return '<svg viewBox="0 0 300 ' + H + '" aria-hidden="true" focusable="false">' + top + body + bot + '</svg>';
+  }
+
+  function makeCard(r, opts) {
+    const card = el('div', 'card' + (opts.pale ? ' pale' : ''));
+    const body = el('div', 'card-body');
+    const art = el('div', 'art');
+    if (opts.noArt) body.classList.add('no-art');
+    if (!opts.noArt) art.innerHTML = sandwichSVG(r); // 색상 상수만 쓰는 SVG라 안전합니다
+    const info = el('div', 'info');
+    if (opts.noArt) body.append(info); else body.append(art, info);
+    card.append(body);
+    if (opts.badge) info.appendChild(el('span', 'badge', opts.badge));
+    info.appendChild(el('h3', null, r.name));
+    if (r.menu) info.appendChild(el('p', 'menu', r.menu));
+    const veg = r.vegetables || [], sau = r.sauces || [];
+    const dl = el('dl');
+    [['빵', r.bread], ['치즈', r.cheese], ['야채', veg.join(', ')], ['소스', sau.join(', ')]].forEach(([k, v]) => {
+      const dt = el('dt', null, k); dt.dataset.k = k; dl.appendChild(dt);
+      dl.appendChild(el('dd', null, v || '-'));
+    });
+    info.appendChild(dl);
+    if (r.reason) info.appendChild(el('p', 'why', '💬 ' + r.reason));
+    const btns = el('div', 'btns');
+    const save = el('button', 'btn small', '내 조합에 담기');
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      try {
+        await rest('POST', 'recipes', '', {
+          user_id: UID, name: r.name, menu: r.menu || null, bread: r.bread || null,
+          cheese: r.cheese || null, vegetables: veg, sauces: sau,
+        });
+        save.textContent = '담았어요 ✓';
+      } catch (err) {
+        save.disabled = false;
+        save.textContent = '다시 시도';
+      }
+    });
+    btns.appendChild(save);
+    info.appendChild(btns);
+    return card;
+  }
+
+  function fillGrid(target, rows, emptyMsg, opts) {
+    target.innerHTML = '';
+    if (!rows.length) {
+      const box = el('div', 'empty');
+      box.appendChild(el('span', 'big', '🥪'));
+      box.appendChild(el('p', null, emptyMsg));
+      target.appendChild(box);
+      return;
+    }
+    const grid = el('div', 'grid');
+    rows.forEach(r => grid.appendChild(makeCard(r, opts)));
+    target.appendChild(grid);
+  }
+
+  function showError(target, msg) {
+    target.innerHTML = '';
+    target.appendChild(el('div', 'empty', msg));
+  }
+
+  // ----- 추천 카드: 다른 사람들의 조합에서 무작위로 3개 -----
+  function pickRecs() {
+    const pool = others.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    fillGrid($('recs'), pool.slice(0, 3), '아직 추천할 조합이 없어요.', { pale: true, badge: '추천', noArt: true });
+  }
+  $('reroll').addEventListener('click', pickRecs);
+
+  // ----- 다른 사람들의 조합 (recipes 테이블, 내 것 제외) -----
+  let others = [];
+  function matches(r, q) {
+    const hay = [r.name, r.menu, r.bread, r.cheese].concat(r.vegetables || [], r.sauces || []).join(' ').toLowerCase();
+    return hay.includes(q);
+  }
+  function renderOthers() {
+    const q = $('search').value.trim().toLowerCase();
+    const rows = q ? others.filter(r => matches(r, q)) : others;
+    const track = $('others');
+    track.innerHTML = '';
+    if (!rows.length) {
+      const box = el('div', 'empty');
+      box.appendChild(el('span', 'big', '🥪'));
+      box.appendChild(el('p', null, q ? '검색 결과가 없어요.' : '아직 다른 사람들의 조합이 없어요.'));
+      track.appendChild(box);
+    } else {
+      rows.forEach(r => track.appendChild(makeCard(r, {})));
+    }
+    track.scrollLeft = 0;
+    updateArrows();
+  }
+
+  // 화살표: 카드 한 장 너비만큼 넘기고, 끝에서는 비활성화
+  function updateArrows() {
+    const t = $('others');
+    $('prev').disabled = t.scrollLeft <= 4;
+    $('next').disabled = t.scrollLeft + t.clientWidth >= t.scrollWidth - 4;
+  }
+  function slide(dir) {
+    const t = $('others');
+    const step = t.clientWidth + 16; // 보이는 카드 묶음(두 장) 만큼 넘김
+    t.scrollBy({ left: dir * step, behavior: 'smooth' });
+  }
+  $('prev').addEventListener('click', () => slide(-1));
+  $('next').addEventListener('click', () => slide(1));
+  $('others').addEventListener('scroll', updateArrows);
+  window.addEventListener('resize', updateArrows);
+
+  async function loadOthers() {
+    try {
+      others = await rest('GET', 'recipes', '?or=(user_id.is.null,user_id.neq.' + UID + ')&order=created_at.desc&limit=60');
+      renderOthers();
+      pickRecs();
+    } catch (err) {
+      showError($('others'), '조합을 불러오지 못했어요. ' + err.message);
+    }
+  }
+  $('search').addEventListener('input', renderOthers);
+
+  // ----- AI 추천 (Edge Function cafe-ai) -----
+  // 요청: POST { prompt }  /  응답: { name, menu, bread, cheese, vegetables[], sauces[], reason }
+  MOODS.forEach(m => {
+    const b = el('button', 'chip', m);
+    b.type = 'button';
+    b.addEventListener('click', () => { $('aiPrompt').value = m + ' 조합 추천해 줘'; $('aiForm').requestSubmit(); });
+    $('aiChips').appendChild(b);
+  });
+
+  $('aiForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const prompt = $('aiPrompt').value.trim();
+    const out = $('aiResult');
+    if (!prompt) { out.innerHTML = ''; out.appendChild(el('p', 'note err', '먹고 싶은 느낌을 적어 주세요.')); return; }
+    $('aiBtn').disabled = true;
+    out.innerHTML = '';
+    out.appendChild(el('p', 'note', '🤔 어울리는 조합을 고르는 중이에요…'));
+    try {
+      const res = await fetch(SUPABASE_URL + '/functions/v1/cafe-ai', {
+        method: 'POST', headers, body: JSON.stringify({ prompt }),
+      });
+      if (res.status === 404) throw new Error('soon');
+      if (!res.ok) throw new Error('fail');
+      const data = await res.json();
+      if (!data || !data.name) throw new Error('fail');
+      out.innerHTML = '';
+      const grid = el('div', 'grid');
+      grid.appendChild(makeCard(data, {}));
+      out.appendChild(grid);
+    } catch (err) {
+      out.innerHTML = '';
+      // 함수가 아직 배포되지 않으면 404 응답이 CORS에 막혀 네트워크 오류(TypeError)로 보입니다.
+      out.appendChild(el('p', 'note err', (err.message === 'soon' || err.name === 'TypeError')
+        ? 'AI 추천은 아직 준비 중이에요. 아래 추천 카드를 먼저 둘러보세요!'
+        : '추천을 받아오지 못했어요. 잠시 후 다시 시도해 주세요.'));
+    } finally {
+      $('aiBtn').disabled = false;
+    }
+  });
+
+  loadOthers();
+</script>
+</body>
+</html>
