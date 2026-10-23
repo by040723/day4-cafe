@@ -292,7 +292,9 @@
     const layers = [];
     veg.filter(v => VEG[v]).slice(0, 5).forEach(v => layers.push(VEG[v]));
     if (r.cheese && r.cheese !== '치즈 없음') {
-      layers.push({ h: 9, d: y => rect(y, 9, '#ffc82e') });
+      layers.push({ h: 9, d: y => rect(y, 9, ({ '아메리칸': '#ffb81c', '슈레드': '#ffd96a', '모짜렐라': '#fffaf0' }[r.cheese] || '#ffc82e')) +
+        // 모짜렐라는 하얘서 배경에 묻히지 않게 아주 옅은 테두리를 둘러요
+        (r.cheese === '모짜렐라' ? '<rect x="' + (X + 0.6) + '" y="' + (y + 0.6) + '" width="' + (BW - 1.2) + '" height="7.8" rx="3.9" fill="none" stroke="#e3d5a3" stroke-width="1.2"/>' : '') });
     }
     PROT.filter(([re]) => re.test(text)).slice(0, 2).forEach(([, L]) => layers.push(L));
 
