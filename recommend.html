@@ -51,6 +51,8 @@
   .btn.secondary { background: var(--canvas); }
   .btn.secondary:hover { background: var(--banner); }
   .btn.small { padding: 6px 14px; font-size: 14px; line-height: 20px; }
+  .btn.danger { background: var(--canvas); color: var(--negative); }
+  .btn.danger:hover { background: var(--banner); }
   .btn:disabled { opacity: .55; cursor: default; }
 
   /* AI 추천 */
@@ -115,7 +117,7 @@
   [data-k="야채"] { color: #4c9a34 !important; }
   [data-k="소스"] { color: #d0453a !important; }
   .card .why { font-size: 14px; background: var(--canvas); border-radius: var(--r-md); padding: 8px 12px; }
-  .card .btns { margin-top: auto; }
+  .card .btns { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
   .badge { display: inline-block; align-self: flex-start; padding: 4px 12px; border-radius: var(--r-pill); background: var(--primary-pale); color: var(--positive-deep); font-size: 14px; font-weight: 600; }
   .card.pale .badge { background: var(--canvas); }
 
@@ -189,6 +191,8 @@
   const UID = getUid();
   // 로그인 여부 (login.html이 저장해 둔 정보로 확인)
   const LOGGED_IN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.user_id && a.token); } catch (e) { return false; } })();
+  // 관리자 여부는 화면에 버튼을 보여줄 때만 씁니다. 실제 권한은 서버가 토큰으로 다시 확인해요.
+  const IS_ADMIN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.token && a.is_admin); } catch (e) { return false; } })();
   function goLogin() { try { window.parent.location.hash = 'login'; } catch (e) { location.href = 'index.html#login'; } }
   // 로그인 토큰으로 서버 함수를 부릅니다. 서버가 "내 조합"인지 확인해서 내 것만 바꿀 수 있어요.
   function authToken() {
@@ -412,6 +416,23 @@
         }
       });
       btns.appendChild(save);
+      // 관리자는 다른 사람의 조합을 지울 수 있어요.
+      if (opts.fromOthers && IS_ADMIN) {
+        const del = el('button', 'btn small danger', '🛡 삭제(관리자)');
+        del.addEventListener('click', async () => {
+          if (!confirm('“' + r.name + '” 조합을 관리자 권한으로 삭제할까요?\n삭제하면 되돌릴 수 없어요.')) return;
+          del.disabled = true;
+          try {
+            await callRpc('delete_recipe', { p_id: r.id });
+            others = others.filter(x => x.id !== r.id);
+            renderOthers();
+          } catch (err) {
+            del.disabled = false;
+            alert(err.message);
+          }
+        });
+        btns.appendChild(del);
+      }
     }
     info.appendChild(btns);
     return card;

@@ -199,7 +199,7 @@
     const a = getAuth();
     $('formCard').hidden = !!a;
     $('meCard').hidden = !a;
-    if (a) $('meName').textContent = a.username + ' 님';
+    if (a) $('meName').textContent = a.username + ' 님' + (a.is_admin ? ' · 👑 관리자' : '');
   }
 
   $('tabLogin').addEventListener('click', () => setMode('login'));
@@ -229,7 +229,7 @@
     try {
       const r = await rpc(mode === 'signup' ? 'signup_user' : 'login_user', { p_username: username, p_password: password });
       if (r.error) { msg(ERR[r.error] || '문제가 생겼어요. 다시 시도해 주세요.'); return; }
-      setAuth({ user_id: r.user_id, username: r.username, token: r.token });
+      setAuth({ user_id: r.user_id, username: r.username, token: r.token, is_admin: !!r.is_admin });
       $('password').value = ''; $('password2').value = '';
       msg('');
       render();
