@@ -165,6 +165,8 @@
   // 로그인 전이므로 브라우저마다 임시 사용자 ID를 만들어 내 조합만 구분합니다.
   let memUid = null;
   function getUid() {
+    // 로그인했다면 계정의 사용자 번호를 씁니다. (login.html)
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); if (a && a.user_id) return a.user_id; } catch (e) {}
     try {
       let id = localStorage.getItem('sw_uid');
       if (!id) { id = crypto.randomUUID(); localStorage.setItem('sw_uid', id); }
@@ -174,6 +176,28 @@
     }
   }
   const UID = getUid();
+  // 로그인 여부 (login.html이 저장해 둔 정보로 확인)
+  const LOGGED_IN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.user_id && a.token); } catch (e) { return false; } })();
+  function goLogin() { try { window.parent.location.hash = 'login'; } catch (e) { location.href = 'index.html#login'; } }
+  // 로그인 토큰으로 서버 함수를 부릅니다. 서버가 "내 조합"인지 확인해서 내 것만 바꿀 수 있어요.
+  function authToken() {
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); return (a && a.token) || null; } catch (e) { return null; }
+  }
+  async function callRpc(fn, args) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ p_token: authToken() }, args)),
+    });
+    if (!res.ok) throw new Error('요청에 실패했어요 (' + res.status + ')');
+    const r = await res.json();
+    if (r && r.error === 'auth') {
+      try { localStorage.removeItem('sw_auth'); } catch (e) {}
+      throw new Error('로그인이 만료됐어요. 다시 로그인해 주세요.');
+    }
+    if (r && r.error) throw new Error(r.error === 'notfound' ? '내 조합이 아니거나 이미 없어요.' : '저장할 수 없는 내용이에요.');
+    return r;
+  }
 
   async function api(method, query, body) {
     const res = await fetch(SUPABASE_URL + '/rest/v1/recipes' + query, {
@@ -255,8 +279,9 @@
     };
     $('saveBtn').disabled = true;
     try {
-      if (editingId) await api('PATCH', '?id=eq.' + editingId + '&user_id=eq.' + UID, row);
-      else await api('POST', '', Object.assign({ user_id: UID }, row));
+      const args = { p_name: row.name, p_menu: row.menu, p_bread: row.bread, p_cheese: row.cheese, p_vegetables: row.vegetables, p_sauces: row.sauces, p_request: row.request };
+      if (editingId) await callRpc('update_recipe', Object.assign({ p_id: editingId }, args));
+      else await callRpc('create_recipe', args);
       closeForm();
       await load();
     } catch (err) {
@@ -439,7 +464,7 @@
       const del = el('button', 'btn small danger', '삭제');
       del.addEventListener('click', async () => {
         if (!confirm('“' + r.name + '” 조합을 삭제할까요?')) return;
-        try { await api('DELETE', '?id=eq.' + r.id + '&user_id=eq.' + UID); await load(); }
+        try { await callRpc('delete_recipe', { p_id: r.id }); await load(); }
         catch (err) { alert(err.message); }
       });
       btns.append(edit, del);
@@ -459,8 +484,22 @@
     }
   }
 
-  renderChips();
-  load();
+  if (LOGGED_IN) {
+    renderChips();
+    load();
+  } else {
+    // 로그인 전에는 내 조합을 보여주지 않고 로그인부터 하라고 안내합니다.
+    $('newBtn').hidden = true;
+    const box = el('div', 'empty');
+    box.appendChild(el('span', 'big', '🔑'));
+    box.appendChild(el('p', null, '로그인부터 해 주세요.'));
+    box.appendChild(el('p', null, '내 조합은 로그인한 뒤에 볼 수 있어요.'));
+    const go = el('button', 'btn', '로그인하러 가기');
+    go.style.marginTop = '16px';
+    go.addEventListener('click', goLogin);
+    box.appendChild(go);
+    listEl.appendChild(box);
+  }
 </script>
 </body>
 </html>

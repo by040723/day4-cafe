@@ -152,6 +152,7 @@
           <button type="button" class="btn secondary" id="resetBtn">처음부터</button>
         </div>
         <p class="msg" id="msg" role="alert"></p>
+        <div class="actions"><button type="button" class="btn" id="loginBtn" style="display:none">🔑 로그인하러 가기</button></div>
         <div class="actions" id="after" style="display:none">
           <button type="button" class="btn" id="goBtn">📒 내 조합 보기</button>
         </div>
@@ -179,6 +180,8 @@
   // 로그인 전이므로 브라우저마다 임시 사용자 ID를 씁니다. (myrecipes.html과 동일)
   let memUid = null;
   function getUid() {
+    // 로그인했다면 계정의 사용자 번호를 씁니다. (login.html)
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); if (a && a.user_id) return a.user_id; } catch (e) {}
     try {
       let id = localStorage.getItem('sw_uid');
       if (!id) { id = crypto.randomUUID(); localStorage.setItem('sw_uid', id); }
@@ -188,6 +191,28 @@
     }
   }
   const UID = getUid();
+  // 로그인 여부 (login.html이 저장해 둔 정보로 확인)
+  const LOGGED_IN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.user_id && a.token); } catch (e) { return false; } })();
+  function goLogin() { try { window.parent.location.hash = 'login'; } catch (e) { location.href = 'index.html#login'; } }
+  // 로그인 토큰으로 서버 함수를 부릅니다. 서버가 "내 조합"인지 확인해서 내 것만 바꿀 수 있어요.
+  function authToken() {
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); return (a && a.token) || null; } catch (e) { return null; }
+  }
+  async function callRpc(fn, args) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ p_token: authToken() }, args)),
+    });
+    if (!res.ok) throw new Error('요청에 실패했어요 (' + res.status + ')');
+    const r = await res.json();
+    if (r && r.error === 'auth') {
+      try { localStorage.removeItem('sw_auth'); } catch (e) {}
+      throw new Error('로그인이 만료됐어요. 다시 로그인해 주세요.');
+    }
+    if (r && r.error) throw new Error(r.error === 'notfound' ? '내 조합이 아니거나 이미 없어요.' : '저장할 수 없는 내용이에요.');
+    return r;
+  }
 
   const $ = id => document.getElementById(id);
 
@@ -401,24 +426,24 @@
   // ===== 저장 =====
   async function save() {
     if (saving) return;
+    if (!LOGGED_IN) {
+      showMsg("저장하려면 로그인부터 해 주세요.");
+      $("loginBtn").style.display = "block";
+      return;
+    }
     const name = $('name').value.trim();
     if (!name) { showMsg('조합 이름을 입력해 주세요.'); $('name').focus(); return; }
     saving = true; $('saveBtn').disabled = true; showMsg('저장하는 중…', true);
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/recipes', {
-        method: 'POST',
-        headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({
-          user_id: UID, name,
-          menu: state.menu[0] || null,
-          bread: state.bread[0] || null,
-          cheese: state.cheese[0] || null,
-          vegetables: state.vegetables,
-          sauces: state.sauces,
-          request: $('request').value.trim() || null,
-        }),
+      await callRpc('create_recipe', {
+        p_name: name,
+        p_menu: state.menu[0] || null,
+        p_bread: state.bread[0] || null,
+        p_cheese: state.cheese[0] || null,
+        p_vegetables: state.vegetables,
+        p_sauces: state.sauces,
+        p_request: $('request').value.trim() || null,
       });
-      if (!res.ok) throw new Error('저장에 실패했어요 (' + res.status + ')');
       showMsg('“' + name + '” 조합을 저장했어요 ✓', true);
       $('after').style.display = 'flex';
     } catch (err) {
@@ -429,6 +454,7 @@
   }
 
   $('saveBtn').addEventListener('click', save);
+  $('loginBtn').addEventListener('click', goLogin);
   $('resetBtn').addEventListener('click', () => {
     state = fresh();
     $('name').value = ''; $('request').value = '';

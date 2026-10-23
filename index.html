@@ -186,7 +186,7 @@
     { id: 'recommend', file: 'recommend.html', emoji: '✨', label: '추천 조합',    desc: 'AI 추천과 다른 사람들의 조합',      ready: true  },
     { id: 'menu',      file: 'menu.html',      emoji: '🥖', label: '조합 만들기',  desc: '빵을 깔고 재료를 쌓아 보세요',      ready: true  },
     { id: 'myrecipes', file: 'myrecipes.html', emoji: '📒', label: '내 조합',      desc: '저장한 조합 보기·수정·삭제',        ready: true  },
-    { id: 'login',     file: 'login.html',     emoji: '🔑', label: '로그인',       desc: '로그인 · 회원가입',                 ready: false },
+    { id: 'login',     file: 'login.html',     emoji: '🔑', label: '로그인',       desc: '로그인 · 회원가입',                 ready: true  },
   ];
 
   const nav = document.getElementById('nav');
@@ -202,6 +202,14 @@
     b.addEventListener('click', () => { location.hash = p.id; });
     nav.appendChild(b);
   });
+
+  // 로그인하면 메뉴의 "로그인" 칸에 내 아이디를 보여줍니다. (login.html에서도 부릅니다)
+  function refreshNav() {
+    let name = null;
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); if (a && a.username && a.token) name = a.username; } catch (e) {}
+    const label = nav.querySelector('[data-id="login"] span:last-child');
+    if (label) label.textContent = name || '로그인';
+  }
 
   function renderHome() {
     const cards = PAGES.filter(p => p.id !== 'home').map(p =>
@@ -263,6 +271,7 @@
   }
 
   window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  refreshNav();
   show(location.hash.slice(1));
 </script>
 </body>

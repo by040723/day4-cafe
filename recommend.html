@@ -135,7 +135,7 @@
   <h1>추천 조합</h1>
   <p class="sub">오늘 뭐 먹을지 고민될 때, 추천 조합을 골라 내 조합으로 담아 보세요.</p>
 
-  <div class="ai">
+  <div class="ai" id="aiBox">
     <h2>✨ AI에게 추천받기</h2>
     <p class="help">기분이나 입맛을 알려 주면 어울리는 조합을 골라 줘요.</p>
     <form class="ask" id="aiForm" autocomplete="off">
@@ -149,13 +149,12 @@
   <section>
     <div class="sec-head">
       <h2>🥪 추천 카드</h2>
-      <button type="button" class="btn small secondary" id="reroll">🎲 다시 뽑기</button>
     </div>
-    <p class="note" style="margin:-8px 0 16px">다른 사람들의 조합 중에서 골라 온 카드예요.</p>
+    <p class="note" style="margin:-8px 0 16px">다른 사람들의 조합에서 가져와 저장한 카드가 여기에 모여요.</p>
     <div id="recs"></div>
   </section>
 
-  <section>
+  <section id="othersSection">
     <div class="sec-head">
       <h2>👀 다른 사람들의 조합</h2>
       <input type="text" id="search" maxlength="40" placeholder="이름·재료로 검색" style="flex:0 1 260px">
@@ -177,6 +176,8 @@
   // 로그인 전이므로 브라우저마다 임시 사용자 ID를 씁니다. (myrecipes.html과 동일)
   let memUid = null;
   function getUid() {
+    // 로그인했다면 계정의 사용자 번호를 씁니다. (login.html)
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); if (a && a.user_id) return a.user_id; } catch (e) {}
     try {
       let id = localStorage.getItem('sw_uid');
       if (!id) { id = crypto.randomUUID(); localStorage.setItem('sw_uid', id); }
@@ -186,6 +187,28 @@
     }
   }
   const UID = getUid();
+  // 로그인 여부 (login.html이 저장해 둔 정보로 확인)
+  const LOGGED_IN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.user_id && a.token); } catch (e) { return false; } })();
+  function goLogin() { try { window.parent.location.hash = 'login'; } catch (e) { location.href = 'index.html#login'; } }
+  // 로그인 토큰으로 서버 함수를 부릅니다. 서버가 "내 조합"인지 확인해서 내 것만 바꿀 수 있어요.
+  function authToken() {
+    try { const a = JSON.parse(localStorage.getItem('sw_auth')); return (a && a.token) || null; } catch (e) { return null; }
+  }
+  async function callRpc(fn, args) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ p_token: authToken() }, args)),
+    });
+    if (!res.ok) throw new Error('요청에 실패했어요 (' + res.status + ')');
+    const r = await res.json();
+    if (r && r.error === 'auth') {
+      try { localStorage.removeItem('sw_auth'); } catch (e) {}
+      throw new Error('로그인이 만료됐어요. 다시 로그인해 주세요.');
+    }
+    if (r && r.error) throw new Error(r.error === 'notfound' ? '내 조합이 아니거나 이미 없어요.' : '저장할 수 없는 내용이에요.');
+    return r;
+  }
 
   const headers = { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' };
 
@@ -361,21 +384,35 @@
     info.appendChild(dl);
     if (r.reason) info.appendChild(el('p', 'why', '💬 ' + r.reason));
     const btns = el('div', 'btns');
-    const save = el('button', 'btn small', '내 조합에 담기');
-    save.addEventListener('click', async () => {
-      save.disabled = true;
-      try {
-        await rest('POST', 'recipes', '', {
-          user_id: UID, name: r.name, menu: r.menu || null, bread: r.bread || null,
-          cheese: r.cheese || null, vegetables: veg, sauces: sau,
-        });
-        save.textContent = '담았어요 ✓';
-      } catch (err) {
-        save.disabled = false;
-        save.textContent = '다시 시도';
-      }
-    });
-    btns.appendChild(save);
+    if (opts.mine) {
+      const view = el('button', 'btn small secondary', '내 조합에서 보기');
+      view.addEventListener('click', goMyRecipes);
+      btns.appendChild(view);
+    } else {
+      const save = el('button', 'btn small', '내 조합에 담기');
+      if (opts.fromOthers && brought.has(r.id)) { save.textContent = '담았어요 ✓'; save.disabled = true; }
+      save.addEventListener('click', async () => {
+        if (!LOGGED_IN) {
+          save.textContent = '저장하려면 로그인이 필요해요 🔑';
+          setTimeout(() => { save.textContent = '내 조합에 담기'; }, 2200);
+          return;
+        }
+        save.disabled = true;
+        try {
+          await callRpc('create_recipe', {
+            p_name: r.name, p_menu: r.menu || null, p_bread: r.bread || null,
+            p_cheese: r.cheese || null, p_vegetables: veg, p_sauces: sau, p_request: null,
+            p_source_id: opts.fromOthers ? r.id : null, // 다른 사람 조합에서 가져온 것이면 기억해 둡니다
+          });
+          save.textContent = '담았어요 ✓';
+          if (opts.fromOthers) { brought.add(r.id); loadBrought(); }
+        } catch (err) {
+          save.disabled = false;
+          save.textContent = '다시 시도';
+        }
+      });
+      btns.appendChild(save);
+    }
     info.appendChild(btns);
     return card;
   }
@@ -399,16 +436,40 @@
     target.appendChild(el('div', 'empty', msg));
   }
 
-  // ----- 추천 카드: 다른 사람들의 조합에서 무작위로 3개 -----
-  function pickRecs() {
-    const pool = others.slice();
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
+  // ----- 추천 카드: 다른 사람들의 조합에서 가져와 저장한 카드가 모입니다 -----
+  let brought = new Set(); // 이미 가져온 조합의 번호
+  function goMyRecipes() { try { window.parent.location.hash = 'myrecipes'; } catch (e) { location.href = 'index.html#myrecipes'; } }
+
+  function showBroughtEmpty() {
+    const target = $('recs');
+    target.innerHTML = '';
+    if (!LOGGED_IN) {
+      target.appendChild(loginPrompt('로그인이 필요해요.', ['추천 카드는 로그인한 뒤에 쓸 수 있어요.', '지금은 아래 “다른 사람들의 조합”만 구경할 수 있어요.', '저장하려면 로그인이 필요해요.']));
+      return;
     }
-    fillGrid($('recs'), pool.slice(0, 3), '아직 추천할 조합이 없어요.', { pale: true, badge: '추천', noArt: true });
+    const box = el('div', 'empty');
+    box.appendChild(el('span', 'big', '🥪'));
+    box.appendChild(el('p', null, '추천 카드가 비어 있어요.'));
+    box.appendChild(el('p', null, '아래 “다른 사람들의 조합”을 구경해 보세요!'));
+    box.appendChild(el('p', null, '마음에 드는 조합을 가져와 저장하면 여기에 모여요.'));
+    const go = el('button', 'btn small', '다른 사람들의 조합 구경하기 ↓');
+    go.style.marginTop = '16px';
+    go.addEventListener('click', () => $('othersSection').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    box.appendChild(go);
+    target.appendChild(box);
   }
-  $('reroll').addEventListener('click', pickRecs);
+
+  async function loadBrought() {
+    if (!LOGGED_IN) { brought = new Set(); showBroughtEmpty(); return; }
+    try {
+      const rows = await rest('GET', 'recipes', '?user_id=eq.' + UID + '&source_id=not.is.null&order=created_at.desc&limit=30');
+      brought = new Set(rows.map(r => r.source_id));
+      if (!rows.length) { showBroughtEmpty(); return; }
+      fillGrid($('recs'), rows, '', { pale: true, badge: '추천', noArt: true, mine: true });
+    } catch (err) {
+      showError($('recs'), '추천 카드를 불러오지 못했어요. ' + err.message);
+    }
+  }
 
   // ----- 다른 사람들의 조합 (recipes 테이블, 내 것 제외) -----
   let others = [];
@@ -427,7 +488,7 @@
       box.appendChild(el('p', null, q ? '검색 결과가 없어요.' : '아직 다른 사람들의 조합이 없어요.'));
       track.appendChild(box);
     } else {
-      rows.forEach(r => track.appendChild(makeCard(r, {})));
+      rows.forEach(r => track.appendChild(makeCard(r, { fromOthers: true })));
     }
     track.scrollLeft = 0;
     updateArrows();
@@ -453,7 +514,7 @@
     try {
       others = await rest('GET', 'recipes', '?or=(user_id.is.null,user_id.neq.' + UID + ')&order=created_at.desc&limit=60');
       renderOthers();
-      pickRecs();
+
     } catch (err) {
       showError($('others'), '조합을 불러오지 못했어요. ' + err.message);
     }
@@ -500,7 +561,31 @@
     }
   });
 
-  loadOthers();
+  // 로그인하지 않았으면 AI 추천과 추천 카드는 막고, 다른 사람들의 조합만 볼 수 있게 합니다.
+  function loginPrompt(title, text) {
+    const box = el('div', 'empty');
+    box.appendChild(el('span', 'big', '🔑'));
+    box.appendChild(el('p', null, title));
+    (Array.isArray(text) ? text : [text]).forEach(t => box.appendChild(el('p', null, t)));
+    const go = el('button', 'btn small', '로그인하러 가기');
+    go.style.marginTop = '16px';
+    go.addEventListener('click', goLogin);
+    box.appendChild(go);
+    return box;
+  }
+  if (!LOGGED_IN) {
+    const ai = $('aiBox');
+    ai.innerHTML = '';
+    ai.appendChild(el('h2', null, '✨ AI에게 추천받기'));
+    const p = el('p', 'help', 'AI 추천은 로그인한 뒤에 받을 수 있어요.');
+    p.style.margin = '4px 0 16px';
+    ai.appendChild(p);
+    const go = el('button', 'btn small', '로그인하러 가기');
+    go.addEventListener('click', goLogin);
+    ai.appendChild(go);
+  }
+
+  loadBrought().finally(loadOthers);
 </script>
 </body>
 </html>
