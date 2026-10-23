@@ -79,8 +79,18 @@
   .msg { margin-top: 12px; font-size: 14px; color: var(--negative); min-height: 20px; }
 
   /* 목록 */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  .card { background: var(--card-bg); border-radius: var(--r-xl); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .card { background: var(--card-bg); border-radius: var(--r-xl); padding: 24px; position: relative; container-type: inline-size; }
+  .card-body { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .info { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .art { order: -1; display: flex; align-items: center; justify-content: center; }
+  .art svg { width: 100%; height: auto; max-height: 150px; }
+  /* 카드가 넓으면 그림은 오른쪽에 */
+  @container (min-width: 460px) {
+    .card-body { grid-template-columns: 1fr minmax(200px, 44%); gap: 24px; }
+    .art { order: 2; }
+    .art svg { max-height: 190px; }
+  }
   .card h3 { font-size: 24px; line-height: 31px; font-weight: 600; letter-spacing: -0.48px; }
   .card .menu { font-size: 14px; color: var(--body); margin-top: -8px; }
   .card dl { display: grid; grid-template-columns: 52px 1fr; gap: 6px 8px; font-size: 14px; line-height: 20px; }
@@ -94,6 +104,8 @@
   .card .req { font-size: 14px; background: var(--primary-pale); border-radius: var(--r-md); padding: 8px 12px; }
   .card .date { font-size: 12px; color: var(--mute); margin-top: auto; }
   .card .btns { display: flex; gap: 8px; }
+  .card .btn.secondary, .card .btn.danger { background: var(--canvas); }
+  .card .btn.secondary:hover, .card .btn.danger:hover { background: var(--banner); }
 
   .empty { background: var(--card-bg); border-radius: var(--r-xl); padding: 48px; text-align: center; color: var(--body); }
   .empty .big { font-size: 56px; line-height: 64px; display: block; margin-bottom: 8px; filter: sepia(.3) saturate(1.1); }
@@ -262,6 +274,136 @@
     return n;
   }
 
+  let svgN = 0;
+  function sandwichSVG(r) {
+    const id = 'sw' + (++svgN);
+    const X = 30, BW = 240, BH = 44, GAP = 4;
+    const BREAD = {
+      '화이트': ['#f6e2b8', '#ffffff'], '하티': ['#e3a352', '#f3cf94'], '위트': ['#b5793a', '#d9a566'],
+      '허니오트': ['#e8b04a', '#fff0b8'], '파마산 오레가노': ['#e3a352', '#fff3d6'], '플랫브레드': ['#efc88a', '#fbe6c0'],
+    };
+    const [bc, bl] = BREAD[r.bread] || BREAD['하티'];
+    const veg = r.vegetables || [], sau = r.sauces || [];
+    const text = (r.menu || '') + ' ' + (r.name || '');
+
+    const rect = (y, h, fill, rx, x, w) =>
+      '<rect x="' + (x == null ? X : x) + '" y="' + y + '" width="' + (w == null ? BW : w) + '" height="' + h + '" rx="' + (rx == null ? h / 2 : rx) + '" fill="' + fill + '"/>';
+    const wave = (y, h, color, sw, amp) =>
+      '<path d="M' + X + ' ' + (y + h / 2) + ' q15 ' + (-amp * 2) + ' 30 0' + ' t30 0'.repeat(7) +
+      '" fill="none" stroke="' + color + '" stroke-width="' + sw + '"/>';
+    const dots = (y, h, n, rad, fill, inner) => {
+      let s = '';
+      for (let i = 0; i < n; i++) {
+        const cx = X + BW / n * (i + 0.5), cy = y + h / 2;
+        s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rad + '" fill="' + fill + '"/>';
+        if (inner) s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + inner[0] + '" fill="' + inner[1] + '"/>';
+      }
+      return s;
+    };
+
+    // 야채 층
+    const VEG = {
+      // 양상추: 홈 화면 샌드위치와 같은 물결 모양 초록 띠
+      '양상추':   { h: 16, d: y => {
+        let p = 'M' + X + ' ' + y + ' q15 14 30 0'.repeat(1);
+        for (let i = 1; i < 8; i++) p += ' q15 14 30 0';
+        return '<path d="' + p + ' V' + (y + 10) + ' a6 6 0 0 1 -6 6 H' + (X + 6) + ' a6 6 0 0 1 -6 -6 Z" fill="#7bd65a"/>';
+      } },
+      '토마토':   { h: 14, d: y => '<clipPath id="' + id + 'tm"><rect x="' + X + '" y="' + y + '" width="' + BW + '" height="14" rx="7"/></clipPath>' +
+                    '<g clip-path="url(#' + id + 'tm)">' + rect(y, 14, '#f05a24', 0) + rect(y, 14, '#cc2229', 0, X, 60) + '</g>' },
+      '오이':     { h: 8,  d: y => rect(y, 8, '#8fd16a') },
+      '피망':     { h: 10, d: y => rect(y, 10, '#4fa83d') },
+      // 피클: 한 줄에 둥근 선 3개 (새우·치킨처럼 조각으로)
+      '피클':     { h: 9,  d: y => [0, 1, 2].map(i => rect(y, 9, '#7d9b2f', 4.5, X + i * 84, 72)).join('') },
+      '올리브':   { h: 12, d: y => dots(y, 12, 8, 6, '#2b2622', [2.2, '#8a8a6a']) },
+      '할라피뇨': { h: 12, d: y => dots(y, 12, 7, 6, '#3f9b2c', [2.4, '#c5e38f']) },
+      '양파':     { h: 8,  d: y => rect(y, 8, '#e7d3ee') + wave(y, 8, '#cfa9de', 2, 2) },
+    };
+    // 고기·속재료 층 (메뉴 이름으로 판단)
+    const PROT = [
+      [/새우|쉬림프/, { h: 26, d: y => {
+        let s = '';
+        for (let i = 0; i < 4; i++) {
+          const cx = X + 34 + i * 58;
+          s += '<path d="M' + (cx - 26) + ' ' + (y + 22) + ' C' + (cx - 28) + ' ' + (y + 2) + ' ' + (cx + 20) + ' ' + (y - 2) + ' ' + (cx + 26) + ' ' + (y + 18) +
+               ' C' + (cx + 14) + ' ' + (y + 10) + ' ' + (cx - 8) + ' ' + (y + 12) + ' ' + (cx - 26) + ' ' + (y + 22) + 'Z" fill="#ff9a76"/>' +
+               '<path d="M' + (cx - 8) + ' ' + (y + 6) + ' l2 7 M' + (cx + 4) + ' ' + (y + 5) + ' l1 7 M' + (cx + 14) + ' ' + (y + 8) + ' l0 6" stroke="#f0613a" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        }
+        return s;
+      } }],
+      [/베이컨/, { h: 16, d: y => rect(y, 16, '#a8342a') + wave(y, 16, '#e07a5f', 6, 3) }],
+      [/치킨/, { h: 22, d: y => {
+        let s = '';
+        for (let i = 0; i < 4; i++) {
+          const x = X + i * 62;
+          s += rect(y, 22, '#d99a4e', 9, x, 54) +
+               '<path d="M' + (x + 14) + ' ' + (y + 4) + ' l8 14 M' + (x + 28) + ' ' + (y + 4) + ' l8 14" stroke="#a8692a" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        }
+        return s;
+      } }],
+      [/참치/, { h: 18, d: y => rect(y, 18, '#e9cfae', 9) + dots(y, 18, 12, 2, '#d6b48a') }],
+      [/에그/, { h: 18, d: y => rect(y, 18, '#fff1b8', 9) + dots(y, 18, 8, 4, '#ffd34d') }],
+      [/풀드포크|바비큐/, { h: 20, d: y => {
+        let s = rect(y, 20, '#8a4b2b', 6);
+        for (let i = 0; i < 14; i++) s += '<path d="M' + (X + 8 + i * 16) + ' ' + (y + 4) + ' l8 10" stroke="#c47a4a" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        return s;
+      } }],
+      [/비엠티|살라미|페퍼로니/, { h: 14, d: y => dots(y, 14, 6, 7, '#b8302c', [1.6, '#f0b8a8']) }],
+      [/터키/, { h: 10, d: y => rect(y, 10, '#ecd0b0') + wave(y, 10, '#d9a98a', 3, 2) }],
+      [/햄/, { h: 14, d: y => wave(y, 14, '#f4a6a6', 14, 3) }],
+    ];
+    const SAUCE = { '랜치': '#fff7e6', '마요네즈': '#fff0b0', '스위트 칠리': '#e8512b', '사우스웨스트': '#d9822b', '허니 머스타드': '#f2b410', '올리브 오일': '#cfd05a' };
+
+    const layers = [];
+    veg.filter(v => VEG[v]).slice(0, 5).forEach(v => layers.push(VEG[v]));
+    if (r.cheese && r.cheese !== '치즈 없음') {
+      layers.push({ h: 9, d: y => rect(y, 9, ({ '아메리칸': '#ffb81c', '슈레드': '#ffd96a', '모짜렐라': '#fffaf0' }[r.cheese] || '#ffc82e')) +
+        // 모짜렐라는 하얘서 배경에 묻히지 않게 아주 옅은 테두리를 둘러요
+        (r.cheese === '모짜렐라' ? '<rect x="' + (X + 0.6) + '" y="' + (y + 0.6) + '" width="' + (BW - 1.2) + '" height="7.8" rx="3.9" fill="none" stroke="#e3d5a3" stroke-width="1.2"/>' : '') });
+    }
+    PROT.filter(([re]) => re.test(text)).slice(0, 2).forEach(([, L]) => layers.push(L));
+
+    // 소스: 패티와 겹치지 않게 소스마다 얇은 물결선 층으로 따로 (둥근 끝)
+    sau.filter(s => SAUCE[s]).slice(0, 2).forEach(s => {
+      layers.push({ h: 10, d: y => wave(y, 10, SAUCE[s], 4, 2.5).replace('fill="none"', 'fill="none" stroke-linecap="round"') });
+    });
+    // 소금·후추는 첫 층 위에 알갱이로
+    const grains = [sau.includes('소금') && '#ffffff', sau.includes('후추') && '#3a2a20'].filter(Boolean);
+    if (grains.length && layers.length) {
+      const first = layers[0];
+      layers[0] = { h: first.h, d: y => {
+        let s = first.d(y);
+        for (let i = 0; i < 14; i++) s += '<circle cx="' + (X + 10 + i * 17) + '" cy="' + (y + 3 + (i % 3) * 3) + '" r="1.7" fill="' + grains[i % grains.length] + '"/>';
+        return s;
+      } };
+    }
+
+    // 빵 (위·아래): 왼쪽 끝은 잘린 단면처럼 밝게
+    const topD = y => 'M' + X + ' ' + (y + BH) + ' V' + (y + 22) + ' A22 22 0 0 1 ' + (X + 22) + ' ' + y + ' H' + (X + BW - 22) + ' A22 22 0 0 1 ' + (X + BW) + ' ' + (y + 22) + ' V' + (y + BH) + ' Z';
+    const botD = y => 'M' + X + ' ' + y + ' H' + (X + BW) + ' V' + (y + 22) + ' A22 22 0 0 1 ' + (X + BW - 22) + ' ' + (y + BH) + ' H' + (X + 22) + ' A22 22 0 0 1 ' + X + ' ' + (y + 22) + ' Z';
+
+    let y = 8;
+    const topY = y;
+    let body = '';
+    y += BH + GAP;
+    layers.forEach(L => { body += L.d(y); y += L.h + GAP; });
+    const botY = y;
+    const H = botY + BH + 8;
+
+    // 빵 안에 들어간 것(귀리, 오레가노)만 아주 살짝 알갱이로 표현
+    const flecks = (yy) => {
+      let s = '';
+      if (r.bread === '허니오트') {
+        for (let i = 0; i < 9; i++) s += '<ellipse cx="' + (X + 22 + i * 25) + '" cy="' + (yy + 14 + (i % 3) * 7) + '" rx="4" ry="2" transform="rotate(' + (i % 2 ? 25 : -25) + ' ' + (X + 22 + i * 25) + ' ' + (yy + 14 + (i % 3) * 7) + ')" fill="' + bl + '"/>';
+      } else if (r.bread === '파마산 오레가노') {
+        for (let i = 0; i < 12; i++) s += '<circle cx="' + (X + 18 + i * 19) + '" cy="' + (yy + 12 + (i % 3) * 8) + '" r="1.8" fill="' + (i % 2 ? '#4c8a2f' : bl) + '"/>';
+      }
+      return s;
+    };
+    const top = '<path d="' + topD(topY) + '" fill="' + bc + '"/>' + flecks(topY);
+    const bot = '<path d="' + botD(botY) + '" fill="' + bc + '"/>';
+    return '<svg viewBox="0 0 300 ' + H + '" aria-hidden="true" focusable="false">' + top + body + bot + '</svg>';
+  }
   function renderList() {
     listEl.innerHTML = '';
     if (!recipes.length) {
@@ -275,18 +417,24 @@
     const grid = el('div', 'grid');
     recipes.forEach(r => {
       const card = el('div', 'card');
-      card.appendChild(el('h3', null, r.name));
-      if (r.menu) card.appendChild(el('p', 'menu', r.menu));
+      const body = el('div', 'card-body');
+      const art = el('div', 'art');
+      art.innerHTML = sandwichSVG(r); // 색상 상수만 쓰는 SVG라 안전합니다
+      const info = el('div', 'info');
+      body.append(art, info);
+      card.append(body);
+      info.appendChild(el('h3', null, r.name));
+      if (r.menu) info.appendChild(el('p', 'menu', r.menu));
       const dl = el('dl');
       [['빵', r.bread], ['치즈', r.cheese], ['야채', r.vegetables.join(', ')], ['소스', r.sauces.join(', ')]].forEach(([k, v]) => {
         const dt = el('dt', null, k); dt.dataset.k = k; dl.appendChild(dt);
         dl.appendChild(el('dd', null, v || '-'));
       });
-      card.appendChild(dl);
-      if (r.request) card.appendChild(el('p', 'req', '📝 ' + r.request));
-      card.appendChild(el('p', 'date', new Date(r.created_at).toLocaleDateString('ko-KR')));
+      info.appendChild(dl);
+      if (r.request) info.appendChild(el('p', 'req', '📝 ' + r.request));
+      info.appendChild(el('p', 'date', new Date(r.created_at).toLocaleDateString('ko-KR')));
       const btns = el('div', 'btns');
-      const edit = el('button', 'btn small secondary', '수정');
+      const edit = el('button', 'btn small', '수정');
       edit.addEventListener('click', () => openForm(r));
       const del = el('button', 'btn small danger', '삭제');
       del.addEventListener('click', async () => {
@@ -295,7 +443,7 @@
         catch (err) { alert(err.message); }
       });
       btns.append(edit, del);
-      card.appendChild(btns);
+      info.appendChild(btns);
       grid.appendChild(card);
     });
     listEl.appendChild(grid);
