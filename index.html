@@ -62,7 +62,7 @@
   }
   .brand svg { flex-shrink: 0; }
   .brand-text { display: flex; flex-direction: column; justify-content: center; gap: 1px; height: 40px; }
-  .brand-text b { font-size: 24px; line-height: 25px; font-weight: 900; }
+  .brand-text b { font-size: 22px; line-height: 25px; font-weight: 900; }
   .brand-text small { font-size: 12px; line-height: 14px; font-weight: 600; color: #9a9088; }
   #nav { display: flex; flex-direction: column; gap: 4px; }
   .nav-item {
@@ -161,10 +161,11 @@
 <nav class="sidebar" aria-label="메인 메뉴">
   <div class="brand">
     <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
-      <rect x="3" y="6" width="34" height="9" rx="4.5" fill="#e8b46a"/>
-      <rect x="5" y="17" width="30" height="4" rx="2" fill="#ffc600"/>
-      <rect x="5" y="23" width="30" height="4" rx="2" fill="#7bd65a"/>
-      <rect x="3" y="29" width="34" height="8" rx="4" fill="#e8b46a"/>
+      <path d="M2 8 v-2 a6 6 0 0 1 6 -6 h24 a6 6 0 0 1 6 6 v2z" fill="#e8b46a"/>
+      <rect x="4" y="11" width="32" height="4" rx="2" fill="#7bd65a"/>
+      <rect x="4" y="18" width="32" height="4" rx="2" fill="#ffc600"/>
+      <rect x="4" y="25" width="32" height="4" rx="2" fill="#e0453a"/>
+      <rect x="2" y="32" width="36" height="8" rx="4" fill="#e8b46a"/>
     </svg>
     <span class="brand-text"><b>Sandwhich?</b><small>샌드위치, 뭐 먹지?</small></span>
   </div>
@@ -213,7 +214,7 @@
     ).join('');
     view.innerHTML =
       '<section class="hero">' +
-        '<div><h1 class="display">나만의 서브 조합,<br>만들고 저장해요</h1>' +
+        '<div><h1 class="display">나만의 샌드위치,<br>만들고 저장해요</h1>' +
         '<p>빵, 치즈, 야채, 소스를 골라 샌드위치를 쌓아 보세요. 마음에 드는 조합은 저장해 두고 주문 전에 다시 꺼내 보면 돼요.</p>' +
         '<button class="btn" data-go="menu">🥖 조합 만들기</button></div>' +
         // 모든 층 사이 간격 8로 통일 (윤곽선 바깥 기준)
