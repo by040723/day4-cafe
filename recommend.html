@@ -483,7 +483,8 @@
   async function loadBrought() {
     if (!LOGGED_IN) { brought = new Set(); showBroughtEmpty(); return; }
     try {
-      const rows = await rest('GET', 'recipes', '?user_id=eq.' + UID + '&source_id=not.is.null&order=created_at.desc&limit=30');
+      const mine = await callRpc('my_recipes', {});
+      const rows = mine.filter(r => r.source_id).slice(0, 30);
       brought = new Set(rows.map(r => r.source_id));
       if (!rows.length) { showBroughtEmpty(); return; }
       fillGrid($('recs'), rows, '', { pale: true, badge: '추천', noArt: true, mine: true });

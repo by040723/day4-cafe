@@ -90,6 +90,7 @@
   .btn.secondary { background: var(--canvas); }
   .btn:disabled { opacity: .55; cursor: default; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .vis-note { font-size: 12px; line-height: 16px; color: var(--mute); margin-top: 6px; }
   .msg { margin-top: 12px; font-size: 14px; min-height: 20px; color: var(--negative); }
   .msg.ok { color: var(--positive-deep); }
 
@@ -147,6 +148,7 @@
         <p class="hint">이름을 붙이면 내 조합에 저장할 수 있어요.</p>
         <div class="field"><label for="name">조합 이름</label><input type="text" id="name" maxlength="40" placeholder="예) 매콤 치킨 데이" autocomplete="off"></div>
         <textarea id="request" maxlength="200" placeholder="요청사항 (예: 야채 많이, 빵은 따뜻하게)"></textarea>
+        <div class="field" style="margin-top:16px"><label>공개 여부</label><div class="chips" data-group="visibility"></div><p class="vis-note" id="visHint"></p></div>
         <div class="actions">
           <button type="button" class="btn" id="saveBtn">내 조합에 저장</button>
           <button type="button" class="btn secondary" id="resetBtn">처음부터</button>
@@ -172,8 +174,9 @@
     cheese:     ['아메리칸', '슈레드', '모짜렐라', '치즈 없음'],
     vegetables: ['양상추', '토마토', '오이', '피망', '피클', '올리브', '할라피뇨', '양파'],
     sauces:     ['랜치', '마요네즈', '스위트 칠리', '사우스웨스트', '허니 머스타드', '올리브 오일', '소금', '후추'],
+    visibility: ['🔒 비공개', '🌐 공개'],
   };
-  const SINGLE = { bread: true, menu: true, cheese: true };
+  const SINGLE = { bread: true, menu: true, cheese: true, visibility: true };
   const GRAINS = ['소금', '후추']; // 층이 아니라 알갱이로 뿌리는 소스
   const MAX_VEG = 5, MAX_SAUCE = 2;
 
@@ -193,6 +196,8 @@
   const UID = getUid();
   // 로그인 여부 (login.html이 저장해 둔 정보로 확인)
   const LOGGED_IN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.user_id && a.token); } catch (e) { return false; } })();
+  // 관리자 여부는 화면 안내에만 씁니다. (실제 규칙은 서버가 정해요)
+  const IS_ADMIN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.token && a.is_admin); } catch (e) { return false; } })();
   function goLogin() { try { window.parent.location.hash = 'login'; } catch (e) { location.href = 'index.html#login'; } }
   // 로그인 토큰으로 서버 함수를 부릅니다. 서버가 "내 조합"인지 확인해서 내 것만 바꿀 수 있어요.
   function authToken() {
@@ -349,7 +354,7 @@
   }
 
   // ===== 상태 =====
-  const fresh = () => ({ bread: ['화이트'], menu: [], cheese: [], vegetables: [], sauces: [] });
+  const fresh = () => ({ bread: ['화이트'], menu: [], cheese: [], vegetables: [], sauces: [], visibility: ['🔒 비공개'] });
   let state = fresh();
   let saving = false;
 
@@ -378,7 +383,7 @@
     const on = state[g].includes(opt);
     showMsg('');
     if (SINGLE[g]) {
-      state[g] = on && g !== 'bread' ? [] : [opt]; // 빵은 항상 하나가 있어야 해요
+      state[g] = on && g !== 'bread' && g !== 'visibility' ? [] : [opt]; // 빵과 공개 여부는 항상 하나가 골라져 있어야 해요
     } else if (on) {
       state[g] = state[g].filter(x => x !== opt);
     } else {
@@ -443,6 +448,7 @@
         p_vegetables: state.vegetables,
         p_sauces: state.sauces,
         p_request: $('request').value.trim() || null,
+        p_is_public: state.visibility[0] === '🌐 공개',
       });
       showMsg('“' + name + '” 조합을 저장했어요 ✓', true);
       $('after').style.display = 'flex';
@@ -466,6 +472,12 @@
     // 메뉴 틀(index.html) 안에서 열렸다면 "내 조합" 화면으로 넘어갑니다.
     try { window.parent.location.hash = 'myrecipes'; } catch (e) { location.href = 'index.html#myrecipes'; }
   });
+
+  // 공개 여부 안내 (관리자 계정의 조합은 서버가 항상 비공개로 둬요)
+  document.querySelector('[data-group=visibility]').style.display = IS_ADMIN ? 'none' : '';
+  $('visHint').textContent = IS_ADMIN
+    ? '관리자 계정의 조합은 항상 비공개예요.'
+    : '공개로 하면 추천 조합 페이지의 “다른 사람들의 조합”에 보여요. 비공개는 나만 볼 수 있어요.';
 
   renderChips();
   render(null, false);

@@ -143,10 +143,10 @@
   /* ---------- 모바일 ---------- */
   @media (max-width: 767px) {
     body { flex-direction: column; }
-    .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 8px 12px; overflow-x: auto; }
+    .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 8px 12px; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--card-bg); }
     .brand, .sidebar-foot { display: none; }
-    #nav { flex-direction: row; }
-    .nav-item { width: auto; flex-shrink: 0; padding: 8px 12px; flex-direction: column; gap: 0; font-size: 12px; line-height: 16px; }
+    #nav { flex-direction: row; margin: 0 auto; }
+    .nav-item { width: auto; flex-shrink: 0; padding: 10px 12px; flex-direction: column; gap: 6px; font-size: 12px; line-height: 16px; }
     .stage { height: auto; flex: 1; min-height: 0; }
     .view { padding: 16px; }
     .hero { flex-direction: column; text-align: center; padding: 32px 24px; }

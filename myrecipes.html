@@ -109,6 +109,8 @@
 
   .empty { background: var(--card-bg); border-radius: var(--r-xl); padding: 48px; text-align: center; color: var(--body); }
   .empty .big { font-size: 56px; line-height: 64px; display: block; margin-bottom: 8px; filter: sepia(.3) saturate(1.1); }
+  .vis-hint { display: block; font-size: 12px; line-height: 16px; color: var(--mute); margin-top: 6px; }
+  .card .badge { align-self: flex-start; }
   .badge { display: inline-block; padding: 4px 12px; border-radius: var(--r-pill); background: var(--primary-pale); color: var(--positive-deep); font-size: 14px; font-weight: 600; }
 
   @media (max-width: 767px) {
@@ -139,6 +141,7 @@
     <div class="field"><label data-k="야채">야채<span class="hint">여러 개 선택</span></label><div class="chips" data-group="vegetables"></div></div>
     <div class="field"><label data-k="소스">소스<span class="hint">여러 개 선택</span></label><div class="chips" data-group="sauces"></div></div>
     <div class="field"><label for="request">요청사항</label><textarea id="request" maxlength="200" placeholder="예) 야채 많이, 빵은 따뜻하게"></textarea></div>
+    <div class="field" id="visField"><label>공개 여부</label><div class="chips" data-group="visibility"></div><span class="vis-hint" id="visHint"></span></div>
     <div class="actions">
       <button type="submit" class="btn" id="saveBtn">저장</button>
       <button type="button" class="btn secondary" id="cancelBtn">취소</button>
@@ -159,8 +162,9 @@
     cheese:     ['아메리칸', '슈레드', '모짜렐라', '치즈 없음'],
     vegetables: ['양상추', '토마토', '오이', '피망', '피클', '올리브', '할라피뇨', '양파'],
     sauces:     ['랜치', '마요네즈', '스위트 칠리', '사우스웨스트', '허니 머스타드', '올리브 오일', '소금', '후추'],
+    visibility: ['🔒 비공개', '🌐 공개'],
   };
-  const SINGLE = { bread: true, cheese: true };
+  const SINGLE = { bread: true, cheese: true, visibility: true };
 
   // 로그인 전이므로 브라우저마다 임시 사용자 ID를 만들어 내 조합만 구분합니다.
   let memUid = null;
@@ -178,6 +182,8 @@
   const UID = getUid();
   // 로그인 여부 (login.html이 저장해 둔 정보로 확인)
   const LOGGED_IN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.user_id && a.token); } catch (e) { return false; } })();
+  // 관리자 여부는 화면 안내에만 씁니다. (실제 규칙은 서버가 정해요)
+  const IS_ADMIN = (() => { try { const a = JSON.parse(localStorage.getItem('sw_auth')); return !!(a && a.token && a.is_admin); } catch (e) { return false; } })();
   function goLogin() { try { window.parent.location.hash = 'login'; } catch (e) { location.href = 'index.html#login'; } }
   // 로그인 토큰으로 서버 함수를 부릅니다. 서버가 "내 조합"인지 확인해서 내 것만 바꿀 수 있어요.
   function authToken() {
@@ -217,7 +223,7 @@
   const form = $('form'), listEl = $('list');
   let recipes = [];
   let editingId = null;
-  let picked = { bread: [], cheese: [], vegetables: [], sauces: [] };
+  let picked = { bread: [], cheese: [], vegetables: [], sauces: [], visibility: ['🔒 비공개'] };
 
   // ----- 칩 선택 -----
   function renderChips() {
@@ -231,7 +237,7 @@
         b.textContent = opt;
         b.addEventListener('click', () => {
           const on = picked[g].includes(opt);
-          if (SINGLE[g]) picked[g] = on ? [] : [opt];
+          if (SINGLE[g]) picked[g] = on && g !== 'visibility' ? [] : [opt];
           else picked[g] = on ? picked[g].filter(x => x !== opt) : picked[g].concat(opt);
           renderChips();
         });
@@ -252,8 +258,12 @@
       cheese: r && r.cheese ? [r.cheese] : [],
       vegetables: r ? r.vegetables.slice() : [],
       sauces: r ? r.sauces.slice() : [],
+      visibility: [r && r.is_public ? '🌐 공개' : '🔒 비공개'],
     };
     $('formMsg').textContent = '';
+    // 관리자 계정의 조합은 항상 비공개라 고르는 칸을 숨기고 안내만 보여줘요.
+    document.querySelector('[data-group=visibility]').style.display = IS_ADMIN ? 'none' : '';
+    $('visHint').textContent = IS_ADMIN ? '관리자 계정의 조합은 항상 비공개예요.' : '공개로 하면 추천 조합 페이지의 “다른 사람들의 조합”에 보여요. 비공개는 나만 볼 수 있어요.';
     renderChips();
     form.classList.add('open');
     $('name').focus();
@@ -276,10 +286,11 @@
       vegetables: picked.vegetables,
       sauces: picked.sauces,
       request: $('request').value.trim() || null,
+      is_public: picked.visibility[0] === '🌐 공개',
     };
     $('saveBtn').disabled = true;
     try {
-      const args = { p_name: row.name, p_menu: row.menu, p_bread: row.bread, p_cheese: row.cheese, p_vegetables: row.vegetables, p_sauces: row.sauces, p_request: row.request };
+      const args = { p_name: row.name, p_menu: row.menu, p_bread: row.bread, p_cheese: row.cheese, p_vegetables: row.vegetables, p_sauces: row.sauces, p_request: row.request, p_is_public: row.is_public };
       if (editingId) await callRpc('update_recipe', Object.assign({ p_id: editingId }, args));
       else await callRpc('create_recipe', args);
       closeForm();
@@ -448,6 +459,7 @@
       const info = el('div', 'info');
       body.append(art, info);
       card.append(body);
+      info.appendChild(el('span', 'badge', r.is_public ? '🌐 공개' : '🔒 비공개'));
       info.appendChild(el('h3', null, r.name));
       if (r.menu) info.appendChild(el('p', 'menu', r.menu));
       const dl = el('dl');
@@ -476,7 +488,7 @@
 
   async function load() {
     try {
-      recipes = await api('GET', '?user_id=eq.' + UID + '&order=created_at.desc');
+      recipes = await callRpc('my_recipes', {});
       renderList();
     } catch (err) {
       listEl.innerHTML = '';
