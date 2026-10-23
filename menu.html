@@ -166,7 +166,7 @@
 
   // 재료 목록 (recommend.html, myrecipes.html, cafe-ai 함수와 같게 유지)
   const OPTIONS = {
-    bread:      ['하티', '위트', '파마산 오레가노', '플랫브레드', '허니오트', '화이트'],
+    bread:      ['화이트', '하티', '위트', '파마산 오레가노', '플랫브레드', '허니오트'],
     menu:       ['쉬림프', '이탈리안 비엠티', '로스트 치킨', '치킨 베이컨', '베이컨', '참치', '터키', '햄', '에그마요', '풀드포크 바비큐', '베지'],
     cheese:     ['아메리칸', '슈레드', '모짜렐라', '치즈 없음'],
     vegetables: ['양상추', '토마토', '오이', '피망', '피클', '올리브', '할라피뇨', '양파'],
@@ -322,7 +322,7 @@
   }
 
   // ===== 상태 =====
-  const fresh = () => ({ bread: ['하티'], menu: [], cheese: [], vegetables: [], sauces: [] });
+  const fresh = () => ({ bread: ['화이트'], menu: [], cheese: [], vegetables: [], sauces: [] });
   let state = fresh();
   let saving = false;
 
