@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서브 레시피 | 나만의 샌드위치 조합</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #009743;
+    --green-dark: #00703a;
+    --yellow: #ffc600;
+    --cream: #fff8e1;
+    --bread: #e8b46a;
+    --ink: #2b2b2b;
+    --card: #ffffff;
+    --menu-w: 220px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Jua', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    display: flex;
+  }
+
+  /* ---------- 왼쪽 메뉴 ---------- */
+  .sidebar {
+    width: var(--menu-w);
+    flex-shrink: 0;
+    background: var(--green);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 14px;
+    gap: 6px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px 18px;
+    font-size: 22px;
+    line-height: 1.1;
+  }
+  .brand svg { flex-shrink: 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    border: none; border-radius: 14px;
+    background: transparent; color: #fff;
+    font: inherit; font-size: 17px; text-align: left;
+    cursor: pointer;
+    transition: background .15s, transform .15s;
+  }
+  .nav-item:hover { background: var(--green-dark); }
+  .nav-item.active { background: var(--yellow); color: var(--ink); }
+  .nav-item .emoji { font-size: 22px; }
+  .sidebar-foot { margin-top: auto; padding: 10px 8px 0; font-size: 13px; opacity: .8; }
+
+  /* ---------- 가운데 화면 ---------- */
+  .stage { flex: 1; min-width: 0; height: 100vh; position: relative; overflow: auto; }
+  .stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; background: var(--cream); }
+  .view { padding: 36px 40px; max-width: 980px; margin: 0 auto; }
+
+  /* 홈 */
+  .hero {
+    background: var(--green);
+    color: #fff;
+    border-radius: 28px;
+    padding: 32px 36px;
+    display: flex; align-items: center; gap: 28px;
+    box-shadow: 0 6px 0 var(--green-dark);
+  }
+  .hero h1 { font-size: 34px; line-height: 1.25; margin-bottom: 10px; }
+  .hero p { font-size: 17px; opacity: .95; line-height: 1.5; }
+  .hero svg { flex-shrink: 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; margin-top: 28px; }
+  .card {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 22px;
+    padding: 20px;
+    text-align: left;
+    font: inherit; color: inherit;
+    cursor: pointer;
+    box-shadow: 0 5px 0 var(--ink);
+    transition: transform .12s, box-shadow .12s;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 0 var(--ink); }
+  .card .big { font-size: 40px; display: block; margin-bottom: 8px; }
+  .card h3 { font-size: 20px; margin-bottom: 4px; }
+  .card p { font-size: 15px; color: #555; line-height: 1.4; }
+  .tag-soon { display: inline-block; margin-top: 8px; padding: 2px 10px; border-radius: 99px; background: var(--yellow); font-size: 13px; }
+
+  /* 준비중 */
+  .soon { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; }
+  .soon .big { font-size: 72px; }
+  .soon h2 { font-size: 30px; }
+  .soon p { font-size: 17px; color: #666; }
+  .soon .pill { background: var(--yellow); padding: 6px 18px; border-radius: 99px; font-size: 18px; }
+
+  /* ---------- 모바일 ---------- */
+  @media (max-width: 720px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 8px 10px; gap: 4px; overflow-x: auto; }
+    .brand, .sidebar-foot { display: none; }
+    .nav-item { width: auto; flex-shrink: 0; padding: 8px 12px; font-size: 14px; flex-direction: column; gap: 2px; }
+    .nav-item .emoji { font-size: 20px; }
+    .stage { height: auto; flex: 1; min-height: 0; }
+    .view { padding: 20px 16px; }
+    .hero { flex-direction: column; text-align: center; padding: 24px 20px; }
+    .hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="sidebar" aria-label="메인 메뉴">
+  <div class="brand">
+    <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+      <rect x="3" y="6" width="34" height="9" rx="4.5" fill="#e8b46a"/>
+      <rect x="5" y="17" width="30" height="4" rx="2" fill="#ffc600"/>
+      <rect x="5" y="23" width="30" height="4" rx="2" fill="#7bd65a"/>
+      <rect x="3" y="29" width="34" height="8" rx="4" fill="#e8b46a"/>
+    </svg>
+    <span>서브<br>레시피</span>
+  </div>
+  <div id="nav"></div>
+  <div class="sidebar-foot">🥪 나만의 조합을 저장해요</div>
+</nav>
+
+<main class="stage" id="stage">
+  <div class="view" id="view"></div>
+</main>
+
+<script>
+  // 페이지가 완성되면 ready: true 로 바꾸면 가운데 화면에 해당 HTML 파일이 열립니다.
+  const PAGES = [
+    { id: 'home',      file: 'index.html',     emoji: '🏠', label: '홈',          desc: '사이트 소개',                       ready: true  },
+    { id: 'recommend', file: 'recommend.html', emoji: '✨', label: '추천 조합',    desc: 'AI 추천과 다른 사람들의 조합',      ready: false },
+    { id: 'menu',      file: 'menu.html',      emoji: '🥖', label: '조합 만들기',  desc: '빵을 깔고 재료를 쌓아 보세요',      ready: false },
+    { id: 'myrecipes', file: 'myrecipes.html', emoji: '📒', label: '내 조합',      desc: '저장한 조합 보기·수정·삭제',        ready: false },
+    { id: 'login',     file: 'login.html',     emoji: '🔑', label: '로그인',       desc: '로그인 · 회원가입',                 ready: false },
+  ];
+
+  const nav = document.getElementById('nav');
+  const stage = document.getElementById('stage');
+  const view = document.getElementById('view');
+  let frame = null;
+
+  PAGES.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'nav-item';
+    b.dataset.id = p.id;
+    b.innerHTML = '<span class="emoji">' + p.emoji + '</span><span>' + p.label + '</span>';
+    b.addEventListener('click', () => { location.hash = p.id; });
+    nav.appendChild(b);
+  });
+
+  function renderHome() {
+    const cards = PAGES.filter(p => p.id !== 'home').map(p =>
+      '<button class="card" data-go="' + p.id + '">' +
+        '<span class="big">' + p.emoji + '</span>' +
+        '<h3>' + p.label + '</h3><p>' + p.desc + '</p>' +
+        (p.ready ? '' : '<span class="tag-soon">준비중</span>') +
+      '</button>'
+    ).join('');
+    view.innerHTML =
+      '<section class="hero">' +
+        '<svg width="150" height="130" viewBox="0 0 150 130" aria-hidden="true">' +
+          '<ellipse cx="75" cy="30" rx="62" ry="24" fill="#e8b46a" stroke="#2b2b2b" stroke-width="4"/>' +
+          '<circle cx="45" cy="22" r="3" fill="#fff3d0"/><circle cx="75" cy="16" r="3" fill="#fff3d0"/><circle cx="105" cy="24" r="3" fill="#fff3d0"/>' +
+          '<path d="M14 52 q15 14 30 0 q15 14 30 0 q15 14 30 0 q15 14 32 0 v8 h-122z" fill="#7bd65a" stroke="#2b2b2b" stroke-width="4" stroke-linejoin="round"/>' +
+          '<rect x="14" y="64" width="122" height="12" rx="3" fill="#ffc600" stroke="#2b2b2b" stroke-width="4"/>' +
+          '<rect x="14" y="80" width="122" height="12" rx="6" fill="#e0453a" stroke="#2b2b2b" stroke-width="4"/>' +
+          '<path d="M12 98 h126 v8 q0 18 -24 18 h-78 q-24 0 -24 -18z" fill="#e8b46a" stroke="#2b2b2b" stroke-width="4" stroke-linejoin="round"/>' +
+        '</svg>' +
+        '<div><h1>나만의 서브 조합,<br>만들고 저장해요 🥪</h1>' +
+        '<p>빵, 치즈, 야채, 소스를 골라 샌드위치를 쌓아 보세요.<br>마음에 드는 조합은 저장해 두고 주문 전에 다시 꺼내 보면 돼요.</p></div>' +
+      '</section>' +
+      '<section class="cards">' + cards + '</section>';
+    view.querySelectorAll('[data-go]').forEach(el =>
+      el.addEventListener('click', () => { location.hash = el.dataset.go; }));
+  }
+
+  function renderSoon(p) {
+    view.innerHTML =
+      '<div class="soon"><span class="big">' + p.emoji + '</span>' +
+      '<h2>' + p.label + '</h2>' +
+      '<span class="pill">🚧 준비중</span>' +
+      '<p>이 페이지는 아직 만들고 있어요.<br>조금만 기다려 주세요!</p></div>';
+  }
+
+  function show(id) {
+    const p = PAGES.find(x => x.id === id) || PAGES[0];
+    nav.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.id === p.id));
+    document.title = p.label + ' | 서브 레시피';
+
+    if (frame) frame.style.display = 'none';
+    view.style.display = 'block';
+
+    if (p.id === 'home') return renderHome();
+    if (!p.ready) return renderSoon(p);
+
+    // 완성된 페이지는 가운데 영역에 그대로 불러옵니다.
+    view.style.display = 'none';
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.title = '내용';
+      stage.appendChild(frame);
+    }
+    frame.style.display = 'block';
+    if (frame.dataset.file !== p.file) { frame.src = p.file; frame.dataset.file = p.file; }
+  }
+
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1));
+</script>
+</body>
+</html>
